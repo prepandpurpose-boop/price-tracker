@@ -229,41 +229,41 @@ const CATEGORIES=['Protein','Produce','Dairy','Pantry','Canned','Frozen','Bread'
 // These are realistic "stock up" thresholds — the price at which a smart shopper buys extra
 const STARTER_ITEMS=[
   // Proteins
-  {name:'Pork Butt (Boston)',category:'Protein',unit:'lb',buy_price:1.29,tip:'One of the cheapest proteins per pound. Buy extra under .29 and freeze.'},
-  {name:'Chicken Thighs (bone-in)',category:'Protein',unit:'lb',buy_price:1.29,tip:'Almost always on sale somewhere. Best bulk-buy protein.'},
-  {name:'Chicken Breasts (boneless)',category:'Protein',unit:'lb',buy_price:1.99,tip:'Higher than thighs but still a staple. Stock up under .'},
-  {name:'Ground Beef (80/20)',category:'Protein',unit:'lb',buy_price:2.99,tip:'Prices swing a lot. Under  is a buy.'},
-  {name:'Ground Turkey',category:'Protein',unit:'lb',buy_price:2.49,tip:'Leaner alternative. Often on sale near holidays.'},
-  {name:'Whole Chicken',category:'Protein',unit:'lb',buy_price:0.99,tip:'Under a dollar per pound is stock-up territory.'},
-  {name:'Bacon',category:'Protein',unit:'lb',buy_price:3.99,tip:'Prices vary wildly. Track your store to find the pattern.'},
-  {name:'Breakfast Sausage',category:'Protein',unit:'lb',buy_price:2.49,tip:'Buy, cook, portion into quart bags.'},
-  {name:'Salmon (frozen)',category:'Protein',unit:'lb',buy_price:4.99,tip:'Frozen is often cheaper than fresh and just as good.'},
-  {name:'Turkey (whole)',category:'Protein',unit:'lb',buy_price:0.79,tip:'Rock bottom in November. Buy 10, break down, freeze.'},
-  {name:'Ham',category:'Protein',unit:'lb',buy_price:1.29,tip:'Cheapest at Easter. Buy extra and freeze for Thanksgiving.'},
-  {name:'Eggs',category:'Dairy',unit:'dozen',buy_price:2.49,tip:'Price swings with supply. Under .50 is solid.'},
+  {name:'Pork Butt (Boston)',category:'Protein',unit:'lb',buy_price:1.99,tip:'One of the cheapest proteins per pound. National avg around 2.50-3.50 per lb — stock up under 2.'},
+  {name:'Chicken Thighs (bone-in)',category:'Protein',unit:'lb',buy_price:1.79,tip:'Best bulk-buy protein. National avg is $2-3/lb — under $1.79 is stock-up territory.'},
+  {name:'Chicken Breasts (boneless)',category:'Protein',unit:'lb',buy_price:2.99,tip:'National avg is 4-5 per lb. Under 3 is a deal worth stocking up on.'},
+  {name:'Ground Beef (80/20)',category:'Protein',unit:'lb',buy_price:4.99,tip:'National avg is $6.90/lb in 2026. Under  is a buy.'},
+  {name:'Ground Turkey',category:'Protein',unit:'lb',buy_price:3.49,tip:'Great beef alternative. National avg ~$4.50/lb — under $3.50 is a buy.'},
+  {name:'Whole Chicken',category:'Protein',unit:'lb',buy_price:1.49,tip:'National avg ~$2/lb. Under $1.49 means buy two and break them down.'},
+  {name:'Bacon',category:'Protein',unit:'lb',buy_price:5.99,tip:'National avg $7-9/lb. Prices vary wildly — track your store to find the cycle.'},
+  {name:'Breakfast Sausage',category:'Protein',unit:'lb',buy_price:3.49,tip:'National avg ~$4.50/lb. Buy under $3.50, cook, portion into quart bags.'},
+  {name:'Salmon (frozen)',category:'Protein',unit:'lb',buy_price:6.99,tip:'National avg $8-10/lb. Frozen is cheaper than fresh and just as good.'},
+  {name:'Turkey (whole)',category:'Protein',unit:'lb',buy_price:0.99,tip:'Rock bottom in November — often under $1/lb. Buy extra, break down, freeze.'},
+  {name:'Ham',category:'Protein',unit:'lb',buy_price:1.99,tip:'Cheapest at Easter — often $1.29-1.49/lb. Buy extra and freeze for Thanksgiving.'},
+  {name:'Eggs',category:'Dairy',unit:'dozen',buy_price:2.99,tip:'Prices dropped 30% from 2025 peak. Under .50 is solid.'},
   // Produce
-  {name:'Sweet Potatoes',category:'Produce',unit:'lb',buy_price:0.79,tip:'Cheap and nutrient-dense. Great base for bowls.'},
-  {name:'Potatoes (russet)',category:'Produce',unit:'lb',buy_price:0.49,tip:'Buy the big bag — usually cheaper per pound.'},
-  {name:'Onions (yellow)',category:'Produce',unit:'lb',buy_price:0.69,tip:'Foundation of everything. Buy the 3lb bag.'},
-  {name:'Carrots',category:'Produce',unit:'lb',buy_price:0.79,tip:'Whole carrots last longer than baby carrots.'},
-  {name:'Bananas',category:'Produce',unit:'lb',buy_price:0.49,tip:'Cheapest fruit. Freeze overripe ones for baking.'},
+  {name:'Sweet Potatoes',category:'Produce',unit:'lb',buy_price:0.99,tip:'National avg ~$1.30/lb. Cheap and nutrient-dense. Great base for meals.'},
+  {name:'Potatoes (russet)',category:'Produce',unit:'lb',buy_price:0.59,tip:'Buy the 10lb bag — usually $4-5. That is under $0.50/lb vs $1+ for loose.'},
+  {name:'Onions (yellow)',category:'Produce',unit:'lb',buy_price:0.89,tip:'Foundation of everything. Buy the 3lb bag — cheaper per pound than loose.'},
+  {name:'Carrots',category:'Produce',unit:'lb',buy_price:0.99,tip:'Whole carrots last longer and cost less than baby carrots.'},
+  {name:'Bananas',category:'Produce',unit:'lb',buy_price:0.59,tip:'Still the cheapest fruit. Freeze overripe ones for baking and smoothies.'},
   // Dairy
-  {name:'Butter (salted)',category:'Dairy',unit:'lb',buy_price:3.00,tip:'Freezes perfectly. Stock up under .'},
-  {name:'Milk (gallon)',category:'Dairy',unit:'gallon',buy_price:2.99,tip:'Or use milk powder for shelf-stable backup.'},
-  {name:'Cheese (block cheddar)',category:'Dairy',unit:'lb',buy_price:2.99,tip:'Block is always cheaper than shredded. Shred your own.'},
+  {name:'Butter (salted)',category:'Dairy',unit:'lb',buy_price:3.99,tip:'National avg about $5/lb. Freezes perfectly. Stock up under .'},
+  {name:'Milk (gallon)',category:'Dairy',unit:'gallon',buy_price:3.49,tip:'National avg ~$4.10/gallon. Or use milk powder for shelf-stable backup.'},
+  {name:'Cheese (block cheddar)',category:'Dairy',unit:'lb',buy_price:4.49,tip:'National avg ~$6/lb. Block is always cheaper than shredded — shred your own.'},
   // Pantry
-  {name:'All Purpose Flour',category:'Pantry',unit:'lb',buy_price:0.40,tip:'Buy the 10lb bag. Fraction of the cost per pound.'},
-  {name:'Sugar (granulated)',category:'Pantry',unit:'lb',buy_price:0.45,tip:'Buy the big bag. Lasts forever.'},
-  {name:'Rice (white long grain)',category:'Pantry',unit:'lb',buy_price:0.50,tip:'20lb bags from warehouse stores are the best deal.'},
-  {name:'Oats (old fashioned)',category:'Pantry',unit:'lb',buy_price:0.15,tip:'Breakfast for pennies. Buy the big canister.'},
-  {name:'Pasta (spaghetti)',category:'Pantry',unit:'box',buy_price:0.99,tip:'Under a dollar means stock the pantry.'},
+  {name:'All Purpose Flour',category:'Pantry',unit:'lb',buy_price:0.50,tip:'Buy the 10lb bag — usually $4-5. That is under $0.50/lb vs $1+ for small bags.'},
+  {name:'Sugar (granulated)',category:'Pantry',unit:'lb',buy_price:0.55,tip:'Sugar prices up 6.7% in 2026. Buy the big bag when you find it under $0.55/lb.'},
+  {name:'Rice (white long grain)',category:'Pantry',unit:'lb',buy_price:0.65,tip:'20lb bags from warehouse stores are the best deal — often under $0.50/lb.'},
+  {name:'Oats (old fashioned)',category:'Pantry',unit:'lb',buy_price:0.20,tip:'Breakfast for pennies. Buy the big canister — under $0.20/lb is a stock-up.'},
+  {name:'Pasta (spaghetti)',category:'Pantry',unit:'box',buy_price:1.25,tip:'National avg ~$1.50-2/box. Under $1.25 means stock the pantry.'},
   // Canned
-  {name:'Black Beans (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Buy a case when under 80 cents.'},
-  {name:'Pinto Beans (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Staple. Cheap protein and fiber.'},
-  {name:'Diced Tomatoes (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Base for sauces, soups, chili.'},
-  {name:'Corn (canned)',category:'Canned',unit:'can',buy_price:0.69,tip:'Cheap side. Stock up under 70 cents.'},
-  {name:'Tomato Sauce',category:'Canned',unit:'can',buy_price:0.49,tip:'The small cans. Under 50 cents is a buy.'},
-  {name:'Tuna (canned)',category:'Canned',unit:'can',buy_price:0.99,tip:'Year-round pantry protein. Always grab under a dollar.'},
+  {name:'Black Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'National avg ~$1.10/can. Buy a case when under $0.89.'},
+  {name:'Pinto Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'Staple protein and fiber. Stock up under $0.89/can.'},
+  {name:'Diced Tomatoes (canned)',category:'Canned',unit:'can',buy_price:0.99,tip:'Base for sauces, soups, chili. Under $1 is a buy.'},
+  {name:'Corn (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Cheap side dish. Stock up under $0.79/can.'},
+  {name:'Tomato Sauce',category:'Canned',unit:'can',buy_price:0.59,tip:'The small 8oz cans. Under $0.59 is a buy.'},
+  {name:'Tuna (canned)',category:'Canned',unit:'can',buy_price:1.25,tip:'Year-round pantry protein. National avg ~$1.50. Grab under $1.25.'},
   // Household
   {name:'Toilet Paper',category:'Household',unit:'roll',buy_price:0.50,tip:'Compare price per roll, not per package. Stock up under 50 cents/roll.'},
   {name:'Paper Towels',category:'Household',unit:'roll',buy_price:0.75,tip:'Buy in bulk when under 75 cents per roll.'},
@@ -546,6 +546,18 @@ function rList(){
   });
 
   let html=`<div class="content">
+    ${A.items.length<3?`<div style="background:var(--green);color:white;border-radius:14px;padding:18px 16px;margin:12px 0">
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">Welcome to Price Tracker</div>
+      <div style="font-size:13px;line-height:1.6;opacity:.9;margin-bottom:12px">This app helps you know your real prices so you never overpay. Here is how it works:</div>
+      <div style="font-size:12px;line-height:1.7;opacity:.85">
+        <strong>1. Add items you buy regularly</strong> — tap them from the Quick Start list below, or add your own.<br>
+        <strong>2. Set your buy price</strong> — this is the price where you stock up. Each starter item has a suggested price based on national averages.<br>
+        <strong>3. Log prices at the store</strong> — tap an item, hit + Log Price, enter what you are paying today. Takes 5 seconds.<br>
+        <strong>4. Watch the signals</strong> — 🟢 green means stock up, 🟡 yellow means normal, 🔴 red means pass if you can.<br>
+        <strong>5. Learn your stores</strong> — after a few trips the app shows you which store has the best price on every item.
+      </div>
+      <div style="font-size:11px;margin-top:12px;opacity:.7">The goal: stop guessing, start knowing. Your data, your prices, your decisions.</div>
+    </div>`:''}
     <div style="padding-top:12px">
       <input class="inp" placeholder="Search items..." value="${A.search}" oninput="A.search=this.value;render()">
     </div>
@@ -553,8 +565,8 @@ function rList(){
       ${['All',...CATEGORIES].map(c=>`<button class="filter-chip ${A.filter===c?'active':''}" onclick="A.filter='${c}';render()">${c}</button>`).join('')}
     </div>`;
 
-  if(filtered.length===0&&A.items.length===0){
-    // QUICK START — show starter items for new users
+  if(A.items.length<10&&!A.quickStartDismissed){
+    // QUICK START — show starter items until user has 10+ items or dismisses
     html+=`<div style="margin-bottom:16px">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">Quick Start</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:16px">Tap the items you buy regularly. Each one comes with a suggested <strong>buy price</strong> — the price where you should stock up. You can adjust these later as you learn your own stores.</div>
@@ -562,7 +574,7 @@ function rList(){
     const cats=[...new Set(STARTER_ITEMS.map(s=>s.category))];
     cats.forEach(cat=>{
       html+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 8px">${cat}</div>`;
-      STARTER_ITEMS.filter(s=>s.category===cat).forEach(s=>{
+      STARTER_ITEMS.filter(s=>s.category===cat&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase())).forEach(s=>{
         html+=`<div class="card" style="cursor:pointer;padding:12px 14px" onclick="addItem('${s.name}','${s.category}','${s.unit}','${s.buy_price}')">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
@@ -580,8 +592,10 @@ function rList(){
     html+=`<div style="text-align:center;margin-top:20px;padding:16px">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Don't see what you need?</div>
       <button class="btn btn-outline btn-sm" onclick="A.modal='addItem';render()">+ Add Custom Item</button>
+      <div style="margin-top:12px"><button style="background:none;border:none;color:var(--text-hint);font-size:12px;cursor:pointer" onclick="A.quickStartDismissed=true;render()">Hide starter items</button></div>
     </div>`;
-  } else if(filtered.length===0){
+  }
+  if(filtered.length===0&&A.items.length>0){
     html+=`<div class="empty">
       <div class="empty-icon">🔍</div>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px">No matches</div>
