@@ -17,10 +17,10 @@
 <style>
 :root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--white:#fffef9;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
+body{overflow-x:hidden;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
 input,select,button,textarea{font-family:inherit}
 button{cursor:pointer}
-.app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--cream);position:relative}
+.app{max-width:480px;overflow-x:hidden;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--cream);position:relative}
 .hdr{background:var(--green);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .hdr-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
 .hdr-sub{font-size:10px;opacity:.65;margin-top:1px;font-weight:500}
@@ -137,8 +137,19 @@ const STARTER_ITEMS=[
 ];
 
 // AUTH
-async function doSignup(){const e=document.getElementById('auth-email')?.value?.trim(),p=document.getElementById('auth-pass')?.value;if(!e||!p)return toast('Enter email and password');if(p.length<6)return toast('Password must be 6+ characters');toast('Creating account...');try{const r=await sb.auth('signup',e,p);if(r.error)return toast(r.error.message);if(r.access_token){A.user=r.user;A.token=r.access_token;localStorage.setItem('pt_token',r.access_token);localStorage.setItem('pt_user',JSON.stringify(r.user));A.page='store_select';await loadData();render();toast('Account created!');}else if(r.user&&!r.access_token){toast('Check your email to confirm, then log in.');}else{toast('Something went wrong — try again');}}catch(x){toast('Could not connect — check your internet');}}
+async function doSignup(){const e=document.getElementById('auth-email')?.value?.trim(),p=document.getElementById('auth-pass')?.value;if(!e||!p)return toast('Enter email and password');if(p.length<6)return toast('Password must be 6+ characters');toast('Creating account...');try{const r=await sb.auth('signup',e,p);if(r.error)return toast(r.error.message);if(r.access_token){A.user=r.user;A.token=r.access_token;localStorage.setItem('pt_token',r.access_token);localStorage.setItem('pt_user',JSON.stringify(r.user));A.page='store_select';await loadData();render();toast('Account created!');}else if(r.user&&!r.access_token){toast('Check your email to confirm, then log in.');}else{console.log('Signup response:',JSON.stringify(r));toast('Something went wrong — try again or use a different email');}}catch(x){toast('Could not connect — check your internet');}}
 async function doLogin(){const e=document.getElementById('auth-email')?.value?.trim(),p=document.getElementById('auth-pass')?.value;if(!e||!p)return toast('Enter email and password');toast('Logging in...');try{const r=await sb.auth('token?grant_type=password',e,p);if(r.error)return toast(r.error.message);if(r.access_token){A.user=r.user;A.token=r.access_token;localStorage.setItem('pt_token',r.access_token);localStorage.setItem('pt_refresh',r.refresh_token);localStorage.setItem('pt_user',JSON.stringify(r.user));A.page='store_select';await loadData();render();toast('Welcome!');}else{toast('Login failed — check email and password');}}catch(x){toast('Could not connect — check your internet');}}
+async function doForgotPassword(){
+  const e=document.getElementById('auth-email')?.value?.trim();
+  if(!e)return toast('Enter your email first, then tap Forgot Password');
+  toast('Sending reset link...');
+  try{
+    const r=await fetch(SB_URL+'/auth/v1/recover',{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY},body:JSON.stringify({email:e})});
+    const d=await r.json();
+    if(d.error)return toast(d.error.message);
+    toast('Check your email for a password reset link');
+  }catch(x){toast('Could not send reset email — check your internet');}
+}
 function doLogout(){A.user=null;A.token=null;A.items=[];A.logs={};A.activeStore=null;localStorage.removeItem('pt_token');localStorage.removeItem('pt_refresh');localStorage.removeItem('pt_user');A.page='landing';render();}
 async function tryAutoLogin(){const t=localStorage.getItem('pt_token'),u=localStorage.getItem('pt_user');if(t&&u){A.token=t;A.user=JSON.parse(u);A.page='store_select';try{await loadData();}catch(e){loadLocal();}render();}else render();}
 
@@ -197,7 +208,8 @@ function rLanding(){
       <div class="lbl" style="text-align:left">Password</div>
       <input class="inp" id="auth-pass" type="password" placeholder="6+ characters" style="margin-bottom:16px">
       <button class="btn btn-primary" onclick="doLogin()">Log In</button>
-      <div style="font-size:13px;color:var(--text-muted);margin-top:16px">No account? <button style="background:none;border:none;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline" onclick="doSignup()">Sign up free</button></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:16px">No account? <button style="background:none;border:none;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline" onclick="doSignup()">Sign up free</button>
+      <div style="margin-top:10px"><button style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline" onclick="doForgotPassword()">Forgot password?</button></div></div>
     </div>
     <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free to use — no credit card, no catch.<br>📱 Add to your home screen for quick access at the store.</div>
   </div>`;
@@ -225,43 +237,98 @@ function rStoreSelect(){
 function rShopping(){
   const store=A.activeStore;
   let h=`<div class="cnt" style="padding-top:8px">`;
-  h+=`<div style="display:flex;gap:6px;padding:4px 0 10px;overflow-x:auto">`;
-  ['All',...CATEGORIES].forEach(c=>{h+=`<button class="chip ${A.filter===c?'active':''}" onclick="A.filter='${c}';render()">${c}</button>`;});
-  h+=`</div>`;
-  const filtered=A.items.filter(i=>(A.filter==='All'||i.category===A.filter));
-  filtered.sort((a,b)=>a.name.localeCompare(b.name));
-  filtered.forEach(item=>{
-    const bp=parseFloat(item.buy_price);
-    const last=getLastAt(item.id,store);
-    const best=getBest(item.id);
-    const lp=last?parseFloat(last.price):null;
-    const sig=lp?getSignal(lp,bp):null;
-    const bestP=best?parseFloat(best.price):null;
-    const better=best&&bestP&&lp&&best.store!==store&&bestP<lp;
-    const cls=sig==='buy'?'card card-buy':sig==='pass'?'card card-pass':'card';
-    h+=`<div class="${cls}" style="cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');openLog()">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Buy under $${bp.toFixed(2)}/${item.unit}</div>
-          ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:3px">💡 $${bestP.toFixed(2)} at ${best.store}</div>`:''}
+  // Search bar
+  h+=`<input class="inp" placeholder="Search items..." value="${A.search}" oninput="A.search=this.value;render()" style="margin-bottom:12px">`;
+
+  // Filter items by search
+  const allItems=A.items.filter(i=>!A.search||i.name.toLowerCase().includes(A.search.toLowerCase()));
+  allItems.sort((a,b)=>a.name.localeCompare(b.name));
+
+  // Recently logged at this store (last 6 unique items)
+  if(!A.search){
+    const recentIds=[];
+    const allLogs=[];
+    A.items.forEach(item=>{(A.logs[item.id]||[]).filter(l=>l.store===store).forEach(l=>allLogs.push({...l,_itemId:item.id}));});
+    allLogs.sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
+    allLogs.forEach(l=>{if(!recentIds.includes(l._itemId)&&recentIds.length<6)recentIds.push(l._itemId);});
+    const recentItems=recentIds.map(id=>A.items.find(i=>i.id===id)).filter(Boolean);
+
+    if(recentItems.length>0){
+      h+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Recently Logged Here</div>`;
+      recentItems.forEach(item=>{
+        const bp=parseFloat(item.buy_price);
+        const last=getLastAt(item.id,store);
+        const best=getBest(item.id);
+        const lp=last?parseFloat(last.price):null;
+        const sig=lp?getSignal(lp,bp):null;
+        const bestP=best?parseFloat(best.price):null;
+        const better=best&&bestP&&lp&&best.store!==store&&bestP<lp;
+        const cls=sig==='buy'?'card card-buy':sig==='pass'?'card card-pass':'card';
+        h+=`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');openLog()">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${item.unit}</div>
+              ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${bestP.toFixed(2)} at ${best.store}</div>`:''}
+            </div>
+            <div style="text-align:right;margin-left:12px;flex-shrink:0">
+              ${lp?`<div style="font-size:17px;font-weight:800;color:${sig==='buy'?'var(--green-bright)':sig==='pass'?'var(--red)':'var(--text)'}">$${lp.toFixed(2)}</div>
+                <div class="sig sig-${sig}"><span class="sig-dot"></span>${sig==='buy'?'STOCK UP':sig==='pass'?'PASS':'NORMAL'}</div>`
+              :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
+            </div>
+          </div>
+        </div>`;
+      });
+      h+=`<div style="border-bottom:1px solid var(--border);margin:12px 0"></div>`;
+    }
+  }
+
+  // All items (excluding recent if not searching)
+  const recentShown=[];
+  if(!A.search){
+    const allLogs2=[];
+    A.items.forEach(item=>{(A.logs[item.id]||[]).filter(l=>l.store===store).forEach(l=>allLogs2.push({...l,_itemId:item.id}));});
+    allLogs2.sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
+    allLogs2.forEach(l=>{if(!recentShown.includes(l._itemId)&&recentShown.length<6)recentShown.push(l._itemId);});
+  }
+  const mainItems=A.search?allItems:allItems.filter(i=>!recentShown.includes(i.id));
+
+  if(mainItems.length>0){
+    if(!A.search&&recentShown.length>0)h+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">All Items</div>`;
+    mainItems.forEach(item=>{
+      const bp=parseFloat(item.buy_price);
+      const last=getLastAt(item.id,store);
+      const best=getBest(item.id);
+      const lp=last?parseFloat(last.price):null;
+      const sig=lp?getSignal(lp,bp):null;
+      const bestP=best?parseFloat(best.price):null;
+      const better=best&&bestP&&lp&&best.store!==store&&bestP<lp;
+      const cls=sig==='buy'?'card card-buy':sig==='pass'?'card card-pass':'card';
+      h+=`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');openLog()">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+            <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${item.unit}</div>
+            ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${bestP.toFixed(2)} at ${best.store}</div>`:''}
+          </div>
+          <div style="text-align:right;margin-left:12px;flex-shrink:0">
+            ${lp?`<div style="font-size:17px;font-weight:800;color:${sig==='buy'?'var(--green-bright)':sig==='pass'?'var(--red)':'var(--text)'}">$${lp.toFixed(2)}</div>
+              <div class="sig sig-${sig}"><span class="sig-dot"></span>${sig==='buy'?'STOCK UP':sig==='pass'?'PASS':'NORMAL'}</div>`
+            :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
+          </div>
         </div>
-        <div style="text-align:right;margin-left:12px;flex-shrink:0">
-          ${lp?`<div style="font-size:18px;font-weight:800;color:${sig==='buy'?'var(--green-bright)':sig==='pass'?'var(--red)':'var(--text)'}">$${lp.toFixed(2)}</div>
-            <div class="sig sig-${sig}"><span class="sig-dot"></span>${sig==='buy'?'STOCK UP':sig==='pass'?'PASS':'NORMAL'}</div>`
-          :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
-        </div>
-      </div>
-    </div>`;
-  });
-  // Suggested items not yet added
-  const unadded=STARTER_ITEMS.filter(s=>(A.filter==='All'||s.category===A.filter)&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
-  if(unadded.length>0){
-    h+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Suggested — Tap to Add & Log</div>`;
-    unadded.forEach(s=>{
+      </div>`;
+    });
+  }
+
+  // Suggested items
+  const unadded=STARTER_ITEMS.filter(s=>!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
+  if(unadded.length>0&&!A.search){
+    h+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Suggested — Tap to Add & Log</div>`;
+    unadded.slice(0,10).forEach(s=>{
       h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="addAndLog('${s.name}','${s.category}','${s.unit}',${s.buy_price})">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:14px;font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--text-muted)">${s.tip}</div></div>
+          <div><div style="font-size:13px;font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--text-muted)">${s.tip}</div></div>
           <div style="font-size:12px;font-weight:700;color:var(--green);flex-shrink:0;margin-left:8px">$${s.buy_price.toFixed(2)}/${s.unit}</div>
         </div>
       </div>`;
