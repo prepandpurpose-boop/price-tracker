@@ -464,6 +464,7 @@ function render(){
   if(A.page==='landing')app.innerHTML=rLanding();
   else if(A.page==='list')app.innerHTML=rHeader()+rList()+rNav()+rModal();
   else if(A.page==='detail')app.innerHTML=rHeader()+rDetail()+rNav()+rModal();
+  else if(A.page==='stores')app.innerHTML=rHeader()+rStores()+rNav()+rModal();
   else if(A.page==='insights')app.innerHTML=rHeader()+rInsights()+rNav()+rModal();
 }
 
@@ -554,7 +555,7 @@ function rList(){
         <strong>2. Set your buy price</strong> — this is the price where you stock up. Each starter item has a suggested price based on national averages.<br>
         <strong>3. Log prices at the store</strong> — tap an item, hit + Log Price, enter what you are paying today. Takes 5 seconds.<br>
         <strong>4. Watch the signals</strong> — 🟢 green means stock up, 🟡 yellow means normal, 🔴 red means pass if you can.<br>
-        <strong>5. Learn your stores</strong> — after a few trips the app shows you which store has the best price on every item.
+        <strong>5. Learn your stores</strong> — tap the 🏪 Stores tab to see all prices organized by store. The app tells you when another store had a better price.
       </div>
       <div style="font-size:11px;margin-top:12px;opacity:.7">The goal: stop guessing, start knowing. Your data, your prices, your decisions.</div>
     </div>`:''}
@@ -565,7 +566,7 @@ function rList(){
       ${['All',...CATEGORIES].map(c=>`<button class="filter-chip ${A.filter===c?'active':''}" onclick="A.filter='${c}';render()">${c}</button>`).join('')}
     </div>`;
 
-  if(A.items.length<10&&!A.quickStartDismissed){
+  if(A.items.length<10){
     // QUICK START — show starter items until user has 10+ items or dismisses
     html+=`<div style="margin-bottom:16px">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">Quick Start</div>
@@ -592,8 +593,30 @@ function rList(){
     html+=`<div style="text-align:center;margin-top:20px;padding:16px">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Don't see what you need?</div>
       <button class="btn btn-outline btn-sm" onclick="A.modal='addItem';render()">+ Add Custom Item</button>
-      <div style="margin-top:12px"><button style="background:none;border:none;color:var(--text-hint);font-size:12px;cursor:pointer" onclick="A.quickStartDismissed=true;render()">Hide starter items</button></div>
+      
     </div>`;
+  }
+  // Always show "Browse Suggestions" button if user has items but wants more
+  if(A.items.length>=10){
+    html+=`<div style="text-align:center;padding:8px 0 12px">
+      <button class="btn btn-outline btn-sm" onclick="A.showSuggestions=!A.showSuggestions;render()">${A.showSuggestions?'Hide':'Browse'} Suggested Items</button>
+    </div>`;
+    if(A.showSuggestions){
+      const cats=[...new Set(STARTER_ITEMS.map(s=>s.category))];
+      cats.forEach(cat=>{
+        const available=STARTER_ITEMS.filter(s=>s.category===cat&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
+        if(available.length===0)return;
+        html+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px">${cat}</div>`;
+        available.forEach(s=>{
+          html+=`<div class="card" style="cursor:pointer;padding:10px 14px" onclick="addItem('${s.name}','${s.category}','${s.unit}','${s.buy_price}')">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:13px;font-weight:600">${s.name}</div>
+              <div style="font-size:12px;font-weight:700;color:var(--green)">$${s.buy_price.toFixed(2)}/${s.unit}</div>
+            </div>
+          </div>`;
+        });
+      });
+    }
   }
   if(filtered.length===0&&A.items.length>0){
     html+=`<div class="empty">
@@ -740,6 +763,77 @@ function rDetail(){
 }
 
 // ─── INSIGHTS ───
+function rStores(){
+  const stores=getStores();
+  if(stores.length===0){
+    return`<div class="content" style="padding-top:16px">
+      <div style="font-size:20px;font-weight:800;margin-bottom:4px">Your Stores</div>
+      <div class="empty">
+        <div class="empty-icon">🏪</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">No stores yet</div>
+        <div style="font-size:13px">Log your first price and the store will appear here automatically.</div>
+      </div>
+    </div>`;
+  }
+
+  let html=`<div class="content" style="padding-top:16px">
+    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Your Stores</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Tap a store to see all your prices there. Compare across stores to find the best deals.</div>`;
+
+  stores.forEach(store=>{
+    // Get all logs for this store with item info
+    const storeItems=[];
+    A.items.forEach(item=>{
+      const logs=(A.logs[item.id]||[]).filter(l=>l.store===store);
+      if(logs.length>0){
+        const sorted=[...logs].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
+        const lastPrice=parseFloat(sorted[0].price);
+        // Find best price across ALL stores for comparison
+        const allLogs=A.logs[item.id]||[];
+        const bestLog=allLogs.length>0?allLogs.reduce((best,l)=>parseFloat(l.price)<parseFloat(best.price)?l:best,allLogs[0]):null;
+        const bestPrice=bestLog?parseFloat(bestLog.price):lastPrice;
+        const bestStore=bestLog?bestLog.store:store;
+        storeItems.push({item,lastPrice,lastDate:sorted[0].logged_date,bestPrice,bestStore,logCount:logs.length});
+      }
+    });
+
+    const isExpanded=A.expandedStore===store;
+    html+=`<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="A.expandedStore=A.expandedStore==='${store}'?null:'${store}';render()">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:15px;font-weight:700">🏪 ${store}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${storeItems.length} item${storeItems.length!==1?'s':''} tracked</div>
+        </div>
+        <div style="font-size:14px;color:var(--text-muted)">${isExpanded?'▼':'▶'}</div>
+      </div>
+    </div>`;
+
+    if(isExpanded){
+      storeItems.sort((a,b)=>a.item.name.localeCompare(b.item.name));
+      storeItems.forEach(si=>{
+        const isBest=si.bestStore===store||si.lastPrice<=si.bestPrice;
+        const savings=si.lastPrice-si.bestPrice;
+        html+=`<div style="padding:10px 16px 10px 28px;background:white;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:13px;font-weight:600">${si.item.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">Last: ${fmtDateShort(si.lastDate)} · ${si.logCount} log${si.logCount!==1?'s':''}</div>
+              ${!isBest&&savings>0.05?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">💡 Save $${savings.toFixed(2)}/${si.item.unit} at ${si.bestStore}</div>`:''}
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:${isBest?'var(--green-bright)':'var(--text)'}">$${si.lastPrice.toFixed(2)}</div>
+              <div style="font-size:10px;color:var(--text-hint)">per ${si.item.unit}</div>
+            </div>
+          </div>
+        </div>`;
+      });
+    }
+  });
+
+  html+=`</div>`;
+  return html;
+}
+
 function rInsights(){
   const stores=getStores();
   // Find items at buy price
@@ -805,6 +899,9 @@ function rNav(){
     <button class="nav-btn ${A.page==='list'?'active':''}" onclick="A.page='list';A.selectedItem=null;render()">
       <span class="nav-btn-icon">📋</span>Items
     </button>
+    <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()">
+      <span class="nav-btn-icon">🏪</span>Stores
+    </button>
     <button class="nav-btn ${A.page==='insights'?'active':''}" onclick="A.page='insights';render()">
       <span class="nav-btn-icon">📊</span>Insights
     </button>
@@ -857,6 +954,16 @@ function rModal(){
         `:''}
         <div class="lbl">Store</div>
         <input class="inp" id="m-store" placeholder="Store name" value="${stores[0]||''}" style="margin-bottom:10px">
+        ${(()=>{
+          const _allLogs=A.logs[item.id]||[];
+          if(_allLogs.length===0)return'';
+          const _best=_allLogs.reduce((b,l)=>parseFloat(l.price)<parseFloat(b.price)?l:b,_allLogs[0]);
+          const _recent=[..._allLogs].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date))[0];
+          return`<div style="background:var(--green-light);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.5">
+            <strong>Your best price:</strong> $${parseFloat(_best.price).toFixed(2)}/${item.unit} at ${_best.store} (${fmtDateShort(_best.logged_date)})<br>
+            <strong>Last logged:</strong> $${parseFloat(_recent.price).toFixed(2)}/${item.unit} at ${_recent.store} (${fmtDateShort(_recent.logged_date)})
+          </div>`;
+        })()}
         <div class="lbl">Price per ${item.unit}</div>
         <input class="inp inp-price" id="m-price" type="number" step="0.01" placeholder="0.00" style="margin-bottom:10px" inputmode="decimal">
         <div class="row" style="margin-bottom:10px">
