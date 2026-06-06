@@ -5,1025 +5,460 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Price Tracker">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUHJpY2UgVHJhY2tlciIsInNob3J0X25hbWUiOiJQcmljZXMiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2ZhZjhmMyIsInRoZW1lX2NvbG9yIjoiIzJkNTAxNiJ9">
 <title>Price Tracker — Prep & Purpose</title>
-<meta name="description" content="Free grocery price tracker. Know your prices, stop overpaying, stock up when it matters.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta name="description" content="Know your prices. Stop overpaying. Track grocery and household prices store by store.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <!--
-══════════════════════════════════════════════════════════════
-  SUPABASE TABLE SETUP — Run these in your Supabase SQL editor
-  (same project as Meal Builder Pro)
-══════════════════════════════════════════════════════════════
-
-CREATE TABLE IF NOT EXISTS price_tracker_items (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'Other',
-  unit TEXT NOT NULL DEFAULT 'lb',
-  buy_price NUMERIC(8,2) NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS price_tracker_logs (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  item_id UUID NOT NULL REFERENCES price_tracker_items(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  price NUMERIC(8,2) NOT NULL,
-  store TEXT NOT NULL DEFAULT 'Unknown',
-  qty NUMERIC(8,2) NOT NULL DEFAULT 1,
-  logged_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-ALTER TABLE price_tracker_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE price_tracker_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users see own items" ON price_tracker_items
-  FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users see own logs" ON price_tracker_logs
-  FOR ALL USING (auth.uid() = user_id);
-
-══════════════════════════════════════════════════════════════
+  ADDITIONAL SQL — Run this in your Supabase SQL editor to add the package_size column:
+  ALTER TABLE price_tracker_logs ADD COLUMN IF NOT EXISTS package_size NUMERIC(8,2) DEFAULT 1;
 -->
-
 <style>
-.logo-img{width:36px;height:36px;border-radius:8px;object-fit:contain;}
-.logo-img-lg{width:80px;height:80px;border-radius:16px;object-fit:contain;margin-bottom:16px;}
-
-:root{
-  --green:#2d5016;
-  --green-mid:#4a7c28;
-  --green-bright:#2a8020;
-  --green-light:#e8f0e0;
-  --cream:#faf8f3;
-  --white:#fffef9;
-  --text:#1a1a1a;
-  --text-muted:#6b6b6b;
-  --text-hint:#999;
-  --border:#e5e2db;
-  --red:#c44;
-  --red-light:#fef0f0;
-  --yellow:#b8860b;
-  --yellow-light:#fdf8ed;
-  --radius:12px;
-  --shadow:0 1px 3px rgba(0,0,0,.08);
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{
-  font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
-  min-height:100vh;-webkit-font-smoothing:antialiased;
-}
-input,select,button,textarea{font-family:inherit;}
-button{cursor:pointer;}
-
-/* Layout */
-.app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--cream);position:relative;}
-.header{background:var(--green);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
-.header-title{font-size:17px;font-weight:800;letter-spacing:-.01em;}
-.header-sub{font-size:10px;opacity:.65;margin-top:1px;font-weight:500;letter-spacing:.02em;}
-.header-btn{background:white;color:var(--green);border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px;}
-.header-back{background:none;border:none;color:white;font-size:14px;font-weight:600;padding:4px 8px;}
-.content{padding:0 16px 120px;}
-
-/* Cards */
-.card{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow);}
-.card-buy{border-color:rgba(42,128,32,.2);box-shadow:0 0 0 1px rgba(42,128,32,.08);}
-.card-pass{border-color:rgba(204,68,68,.15);}
-
-/* Signals */
-.signal{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
-.signal-dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
-.signal-buy{color:var(--green-bright);}
-.signal-buy .signal-dot{background:var(--green-bright);}
-.signal-normal{color:var(--yellow);}
-.signal-normal .signal-dot{background:var(--yellow);}
-.signal-pass{color:var(--red);}
-.signal-pass .signal-dot{background:var(--red);}
-
-/* Price bar */
-.price-bar{position:relative;height:6px;background:var(--border);border-radius:3px;margin:8px 0 4px;}
-.price-bar-fill{position:absolute;left:0;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green-bright),var(--yellow));}
-.price-bar-buy{position:absolute;top:-2px;width:2px;height:10px;background:var(--green);border-radius:1px;}
-.price-bar-current{position:absolute;top:-4px;width:10px;height:14px;border-radius:3px;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.2);transform:translateX(-5px);}
-
-/* Filters */
-.filters{display:flex;gap:6px;padding:12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.filters::-webkit-scrollbar{display:none;}
-.filter-chip{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:white;color:var(--text-muted);font-size:11px;font-weight:600;white-space:nowrap;}
-.filter-chip.active{background:var(--green);border-color:var(--green);color:white;}
-
-/* Store chips */
-.store-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
-.store-chip{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:white;font-size:12px;font-weight:600;color:var(--text-muted);}
-.store-chip.active{background:var(--green);border-color:var(--green);color:white;}
-
-/* Inputs */
-.inp{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white;}
-.inp:focus{outline:none;border-color:var(--green-mid);box-shadow:0 0 0 2px rgba(45,80,22,.12);}
-.inp-price{font-size:18px;font-weight:700;padding:12px 14px;}
-.lbl{display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
-.row{display:flex;gap:8px;}
-
-/* Buttons */
-.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;}
-.btn-primary{background:var(--green);color:white;}
-.btn-outline{background:white;color:var(--green);border:1px solid var(--green);}
-.btn-danger{background:white;color:var(--red);border:1px solid var(--red);font-size:13px;padding:10px;}
-.btn-sm{padding:8px 14px;font-size:12px;width:auto;border-radius:8px;}
-
-/* Modal */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:200;}
-.modal-sheet{background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;}
-.modal-title{font-size:17px;font-weight:800;margin-bottom:16px;}
-
-/* Stats row */
-.stats-row{display:flex;gap:8px;margin-bottom:20px;}
-.stat-card{flex:1;background:white;border-radius:10px;padding:12px 10px;text-align:center;border:1px solid var(--border);}
-.stat-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
-.stat-value{font-size:18px;font-weight:800;margin-top:4px;}
-
-/* Log entry */
-.log-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);}
-
-/* Landing page */
-.landing{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 24px;text-align:center;}
-.landing-logo{font-size:48px;margin-bottom:16px;}
-.landing-title{font-size:26px;font-weight:800;color:var(--green);line-height:1.2;margin-bottom:8px;}
-.landing-sub{font-size:15px;color:var(--text-muted);line-height:1.6;margin-bottom:32px;max-width:340px;}
-.landing-feature{display:flex;align-items:flex-start;gap:12px;text-align:left;margin-bottom:16px;max-width:340px;}
-.landing-feature-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
-.landing-feature-text{font-size:13px;color:var(--text);line-height:1.5;}
-.landing-feature-text strong{display:block;font-size:14px;margin-bottom:2px;}
-.auth-box{width:100%;max-width:340px;margin-top:32px;}
-.auth-toggle{font-size:13px;color:var(--text-muted);margin-top:16px;}
-.auth-toggle button{background:none;border:none;color:var(--green);font-weight:700;font-size:13px;text-decoration:underline;}
-
-/* Nav */
-.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:white;border-top:1px solid var(--border);display:flex;z-index:50;padding:8px 0 max(8px,env(safe-area-inset-bottom));}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;background:none;border:none;font-size:10px;font-weight:600;color:var(--text-muted);}
-.nav-btn.active{color:var(--green);}
-.nav-btn-icon{font-size:20px;}
-
-/* Empty state */
-.empty{text-align:center;padding:40px 20px;color:var(--text-muted);}
-.empty-icon{font-size:48px;margin-bottom:10px;}
-
-/* Alert */
-.alert{background:var(--green-light);border:1px solid rgba(42,128,32,.15);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;color:var(--text);}
-
-/* Responsive */
-@media(max-width:400px){
-  .content{padding:0 12px 120px;}
-  .header{padding:12px 14px;}
-}
+:root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--white:#fffef9;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased}
+input,select,button,textarea{font-family:inherit}
+button{cursor:pointer}
+.app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--cream);position:relative}
+.hdr{background:var(--green);color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.hdr-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.hdr-sub{font-size:10px;opacity:.65;margin-top:1px;font-weight:500}
+.hdr-btn{background:white;color:var(--green);border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px}
+.hdr-back{background:none;border:none;color:white;font-size:14px;font-weight:600;padding:4px 8px}
+.cnt{padding:0 16px 120px}
+.card{background:white;border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow)}
+.card-buy{border-color:rgba(42,128,32,.2)}
+.card-pass{border-color:rgba(204,68,68,.15)}
+.sig{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.sig-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sig-buy{color:var(--green-bright)}.sig-buy .sig-dot{background:var(--green-bright)}
+.sig-norm{color:var(--yellow)}.sig-norm .sig-dot{background:var(--yellow)}
+.sig-pass{color:var(--red)}.sig-pass .sig-dot{background:var(--red)}
+.inp{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white}
+.inp:focus{outline:none;border-color:var(--green-mid);box-shadow:0 0 0 2px rgba(45,80,22,.12)}
+.inp-lg{font-size:20px;font-weight:700;padding:14px;text-align:center}
+.lbl{display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.req{color:var(--red)}
+.row{display:flex;gap:8px}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700}
+.btn-primary{background:var(--green);color:white}
+.btn-outline{background:white;color:var(--green);border:1px solid var(--green)}
+.btn-sm{padding:8px 14px;font-size:12px;width:auto;border-radius:8px}
+.btn-danger{background:white;color:var(--red);border:1px solid var(--red);font-size:13px;padding:10px}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:200}
+.modal-sheet{background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:16px}
+.store-btn{width:100%;padding:16px;background:white;border:1px solid var(--border);border-radius:var(--radius);font-size:16px;font-weight:700;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:all .15s}
+.store-btn:hover,.store-btn:active{border-color:var(--green);background:var(--green-light)}
+.store-btn-add{border-style:dashed;color:var(--green);font-weight:600}
+.chip{display:inline-flex;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:white;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer}
+.chip.active{background:var(--green);border-color:var(--green);color:white}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:white;border-top:1px solid var(--border);display:flex;z-index:50;padding:6px 0 max(6px,env(safe-area-inset-bottom))}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;background:none;border:none;font-size:10px;font-weight:600;color:var(--text-muted)}
+.nav-btn.active{color:var(--green)}
+.nav-i{font-size:20px}
+.empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.alert{border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.5}
+.logo{width:36px;height:36px;border-radius:8px;object-fit:contain}
+.logo-lg{width:80px;height:80px;border-radius:16px;object-fit:contain;margin-bottom:16px}
+.result-card{border-radius:14px;padding:20px;margin:16px 0;text-align:center}
+.result-buy{background:var(--green-light);border:1px solid rgba(42,128,32,.2)}
+.result-norm{background:var(--yellow-light);border:1px solid rgba(184,134,11,.15)}
+.result-pass{background:var(--red-light);border:1px solid rgba(204,68,68,.15)}
+.home-prompt{background:var(--green);color:white;border-radius:14px;padding:20px;margin:12px 0;text-align:center}
+@media(max-width:400px){.cnt{padding:0 12px 120px}.hdr{padding:12px 14px}}
 </style>
 </head>
 <body>
-
 <div class="app" id="app"></div>
+<script>const SB_URL='https://hoiuounrlakvekxesgzh.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvaXVvdW5ybGFrdmVreGVzZ3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDk1MTQsImV4cCI6MjA5NDAyNTUxNH0.M14Y7_YXvyq4R-p7lhDZl8aLfmlGxljJruLQgz6zbbA';
+const LOGO='data:image/png;base64,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';
 
-<script>
-// ══════════════════════════════════════════════════════════════
-//  SUPABASE CONFIG — same project as Meal Builder Pro
-//  Replace these with your Supabase URL and anon key
-// ══════════════════════════════════════════════════════════════
-const SUPABASE_URL='https://hoiuounrlakvekxesgzh.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvaXVvdW5ybGFrdmVreGVzZ3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDk1MTQsImV4cCI6MjA5NDAyNTUxNH0.M14Y7_YXvyq4R-p7lhDZl8aLfmlGxljJruLQgz6zbbA';
-
-// Minimal Supabase client
 const sb={
-  headers:()=>({'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+(A.token||SUPABASE_KEY)}),
+  headers:()=>({'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+(A.token||SB_KEY)}),
   async rpc(table,method,body,query=''){
-    const url=`${SUPABASE_URL}/rest/v1/${table}${query}`;
+    const url=`${SB_URL}/rest/v1/${table}${query}`;
     const r=await fetch(url,{method,headers:{...sb.headers(),...(method==='GET'?{}:{'Prefer':'return=representation'})},body:body?JSON.stringify(body):undefined});
     if(!r.ok)throw new Error(await r.text());
-    const text=await r.text();
-    return text?JSON.parse(text):null;
+    const text=await r.text();return text?JSON.parse(text):null;
   },
   async auth(action,email,password){
-    const url=`${SUPABASE_URL}/auth/v1/${action}`;
-    const body=action==='signup'?{email,password}:{email,password};
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},body:JSON.stringify(body)});
-    return r.json();
+    const r=await fetch(`${SB_URL}/auth/v1/${action}`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SB_KEY},body:JSON.stringify({email,password})});return r.json();
   }
 };
 
-// ══════════════════════════════════════════════════════════════
-//  APP STATE
-// ══════════════════════════════════════════════════════════════
-const A={
-  user:null,token:null,
-  items:[],logs:{},// logs keyed by item id
-  page:'landing',// landing | list | detail | insights
-  filter:'All',
-  search:'',
-  selectedItem:null,
-  modal:null,// null | 'addItem' | 'logPrice' | 'editItem'
-};
-
+const A={user:null,token:null,items:[],logs:{},page:'landing',activeStore:null,modal:null,filter:'All',search:'',selectedItem:null,expandedStore:null,_logResult:null,_pendingLogs:[]};
 const CATEGORIES=['Protein','Produce','Dairy','Pantry','Canned','Frozen','Bread','Household','Other'];
-
-// Quick Start items with suggested buy prices
-// These are realistic "stock up" thresholds — the price at which a smart shopper buys extra
+const UNITS=['lb','oz','each','can','gallon','dozen','bag','jar','box','pack','roll','bottle'];
 const STARTER_ITEMS=[
-  // Proteins
-  {name:'Pork Butt (Boston)',category:'Protein',unit:'lb',buy_price:1.99,tip:'One of the cheapest proteins per pound. National avg around 2.50-3.50 per lb — stock up under 2.'},
-  {name:'Chicken Thighs (bone-in)',category:'Protein',unit:'lb',buy_price:1.79,tip:'Best bulk-buy protein. National avg is $2-3/lb — under $1.79 is stock-up territory.'},
-  {name:'Chicken Breasts (boneless)',category:'Protein',unit:'lb',buy_price:2.99,tip:'National avg is 4-5 per lb. Under 3 is a deal worth stocking up on.'},
-  {name:'Ground Beef (80/20)',category:'Protein',unit:'lb',buy_price:4.99,tip:'National avg is $6.90/lb in 2026. Under  is a buy.'},
-  {name:'Ground Turkey',category:'Protein',unit:'lb',buy_price:3.49,tip:'Great beef alternative. National avg ~$4.50/lb — under $3.50 is a buy.'},
-  {name:'Whole Chicken',category:'Protein',unit:'lb',buy_price:1.49,tip:'National avg ~$2/lb. Under $1.49 means buy two and break them down.'},
-  {name:'Bacon',category:'Protein',unit:'lb',buy_price:5.99,tip:'National avg $7-9/lb. Prices vary wildly — track your store to find the cycle.'},
-  {name:'Breakfast Sausage',category:'Protein',unit:'lb',buy_price:3.49,tip:'National avg ~$4.50/lb. Buy under $3.50, cook, portion into quart bags.'},
-  {name:'Salmon (frozen)',category:'Protein',unit:'lb',buy_price:6.99,tip:'National avg $8-10/lb. Frozen is cheaper than fresh and just as good.'},
-  {name:'Turkey (whole)',category:'Protein',unit:'lb',buy_price:0.99,tip:'Rock bottom in November — often under $1/lb. Buy extra, break down, freeze.'},
-  {name:'Ham',category:'Protein',unit:'lb',buy_price:1.99,tip:'Cheapest at Easter — often $1.29-1.49/lb. Buy extra and freeze for Thanksgiving.'},
-  {name:'Eggs',category:'Dairy',unit:'dozen',buy_price:2.99,tip:'Prices dropped 30% from 2025 peak. Under .50 is solid.'},
-  // Produce
-  {name:'Sweet Potatoes',category:'Produce',unit:'lb',buy_price:0.99,tip:'National avg ~$1.30/lb. Cheap and nutrient-dense. Great base for meals.'},
-  {name:'Potatoes (russet)',category:'Produce',unit:'lb',buy_price:0.59,tip:'Buy the 10lb bag — usually $4-5. That is under $0.50/lb vs $1+ for loose.'},
-  {name:'Onions (yellow)',category:'Produce',unit:'lb',buy_price:0.89,tip:'Foundation of everything. Buy the 3lb bag — cheaper per pound than loose.'},
-  {name:'Carrots',category:'Produce',unit:'lb',buy_price:0.99,tip:'Whole carrots last longer and cost less than baby carrots.'},
-  {name:'Bananas',category:'Produce',unit:'lb',buy_price:0.59,tip:'Still the cheapest fruit. Freeze overripe ones for baking and smoothies.'},
-  // Dairy
-  {name:'Butter (salted)',category:'Dairy',unit:'lb',buy_price:3.99,tip:'National avg about $5/lb. Freezes perfectly. Stock up under .'},
-  {name:'Milk (gallon)',category:'Dairy',unit:'gallon',buy_price:3.49,tip:'National avg ~$4.10/gallon. Or use milk powder for shelf-stable backup.'},
-  {name:'Cheese (block cheddar)',category:'Dairy',unit:'lb',buy_price:4.49,tip:'National avg ~$6/lb. Block is always cheaper than shredded — shred your own.'},
-  // Pantry
-  {name:'All Purpose Flour',category:'Pantry',unit:'lb',buy_price:0.50,tip:'Buy the 10lb bag — usually $4-5. That is under $0.50/lb vs $1+ for small bags.'},
-  {name:'Sugar (granulated)',category:'Pantry',unit:'lb',buy_price:0.55,tip:'Sugar prices up 6.7% in 2026. Buy the big bag when you find it under $0.55/lb.'},
-  {name:'Rice (white long grain)',category:'Pantry',unit:'lb',buy_price:0.65,tip:'20lb bags from warehouse stores are the best deal — often under $0.50/lb.'},
-  {name:'Oats (old fashioned)',category:'Pantry',unit:'lb',buy_price:0.20,tip:'Breakfast for pennies. Buy the big canister — under $0.20/lb is a stock-up.'},
-  {name:'Pasta (spaghetti)',category:'Pantry',unit:'box',buy_price:1.25,tip:'National avg ~$1.50-2/box. Under $1.25 means stock the pantry.'},
-  // Canned
-  {name:'Black Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'National avg ~$1.10/can. Buy a case when under $0.89.'},
-  {name:'Pinto Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'Staple protein and fiber. Stock up under $0.89/can.'},
-  {name:'Diced Tomatoes (canned)',category:'Canned',unit:'can',buy_price:0.99,tip:'Base for sauces, soups, chili. Under $1 is a buy.'},
-  {name:'Corn (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Cheap side dish. Stock up under $0.79/can.'},
-  {name:'Tomato Sauce',category:'Canned',unit:'can',buy_price:0.59,tip:'The small 8oz cans. Under $0.59 is a buy.'},
-  {name:'Tuna (canned)',category:'Canned',unit:'can',buy_price:1.25,tip:'Year-round pantry protein. National avg ~$1.50. Grab under $1.25.'},
-  // Household
-  {name:'Toilet Paper',category:'Household',unit:'roll',buy_price:0.50,tip:'Compare price per roll, not per package. Stock up under 50 cents/roll.'},
-  {name:'Paper Towels',category:'Household',unit:'roll',buy_price:0.75,tip:'Buy in bulk when under 75 cents per roll.'},
-  {name:'Aluminum Foil',category:'Household',unit:'box',buy_price:3.49,tip:'Heavy duty vs regular — track them separately if you buy both.'},
-  {name:'Plastic Wrap',category:'Household',unit:'box',buy_price:2.99,tip:'Essential for emergency meal prep. Stock up under $3.'},
-  {name:'Ziplock Bags (gallon)',category:'Household',unit:'box',buy_price:3.99,tip:'Freezer bags for the emergency layer. Buy in bulk.'},
-  {name:'Ziplock Bags (quart)',category:'Household',unit:'box',buy_price:3.49,tip:'For bases and supports. Track price per box.'},
-  {name:'Trash Bags',category:'Household',unit:'box',buy_price:6.99,tip:'Compare price per bag, not per box — counts vary.'},
-  {name:'Dish Soap',category:'Household',unit:'bottle',buy_price:2.49,tip:'Concentrate lasts longer. Track cost per bottle.'},
-  {name:'Laundry Detergent',category:'Household',unit:'bottle',buy_price:8.99,tip:'Price per load matters more than price per bottle. Watch for sales.'},
-  {name:'Parchment Paper',category:'Household',unit:'box',buy_price:3.49,tip:'Essential for baking and freezer prep. Stock up under $3.50.'},
+{name:'Pork Butt (Boston)',category:'Protein',unit:'lb',buy_price:1.99,tip:'Stock up under 2/lb'},
+{name:'Chicken Thighs (bone-in)',category:'Protein',unit:'lb',buy_price:1.79,tip:'Best bulk-buy protein'},
+{name:'Chicken Breasts (boneless)',category:'Protein',unit:'lb',buy_price:2.99,tip:'Under 3 is a deal'},
+{name:'Ground Beef (80/20)',category:'Protein',unit:'lb',buy_price:4.99,tip:'National avg 6.90/lb'},
+{name:'Ground Turkey',category:'Protein',unit:'lb',buy_price:3.49,tip:'Great beef alternative'},
+{name:'Whole Chicken',category:'Protein',unit:'lb',buy_price:1.49,tip:'Buy two and break down'},
+{name:'Bacon',category:'Protein',unit:'lb',buy_price:5.99,tip:'Track your store cycle'},
+{name:'Breakfast Sausage',category:'Protein',unit:'lb',buy_price:3.49,tip:'Cook and bag under 3.50'},
+{name:'Salmon (frozen)',category:'Protein',unit:'lb',buy_price:6.99,tip:'Frozen is just as good'},
+{name:'Turkey (whole)',category:'Protein',unit:'lb',buy_price:0.99,tip:'Stock up in November'},
+{name:'Ham',category:'Protein',unit:'lb',buy_price:1.99,tip:'Buy extra at Easter'},
+{name:'Eggs',category:'Dairy',unit:'dozen',buy_price:2.99,tip:'Under 3/dozen is a buy'},
+{name:'Sweet Potatoes',category:'Produce',unit:'lb',buy_price:0.99,tip:'Cheap and nutrient-dense'},
+{name:'Potatoes (russet)',category:'Produce',unit:'lb',buy_price:0.59,tip:'Buy the 10lb bag'},
+{name:'Onions (yellow)',category:'Produce',unit:'lb',buy_price:0.89,tip:'Buy the 3lb bag'},
+{name:'Carrots',category:'Produce',unit:'lb',buy_price:0.99,tip:'Whole last longer'},
+{name:'Bananas',category:'Produce',unit:'lb',buy_price:0.59,tip:'Cheapest fruit'},
+{name:'Butter (salted)',category:'Dairy',unit:'lb',buy_price:3.99,tip:'Freezes perfectly'},
+{name:'Milk (gallon)',category:'Dairy',unit:'gallon',buy_price:3.49,tip:'Avg about 4.10'},
+{name:'Cheese (block cheddar)',category:'Dairy',unit:'lb',buy_price:4.49,tip:'Shred your own'},
+{name:'All Purpose Flour',category:'Pantry',unit:'lb',buy_price:0.50,tip:'Buy the 10lb bag'},
+{name:'Sugar (granulated)',category:'Pantry',unit:'lb',buy_price:0.55,tip:'Prices up in 2026'},
+{name:'Rice (white long grain)',category:'Pantry',unit:'lb',buy_price:0.65,tip:'20lb bags best deal'},
+{name:'Oats (old fashioned)',category:'Pantry',unit:'lb',buy_price:0.20,tip:'Breakfast for pennies'},
+{name:'Pasta (spaghetti)',category:'Pantry',unit:'box',buy_price:1.25,tip:'Under 1.25 stock up'},
+{name:'Black Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'Buy a case under 0.89'},
+{name:'Pinto Beans (canned)',category:'Canned',unit:'can',buy_price:0.89,tip:'Staple protein'},
+{name:'Diced Tomatoes',category:'Canned',unit:'can',buy_price:0.99,tip:'Base for everything'},
+{name:'Corn (canned)',category:'Canned',unit:'can',buy_price:0.79,tip:'Stock up under 0.79'},
+{name:'Tomato Sauce',category:'Canned',unit:'can',buy_price:0.59,tip:'Small cans under 0.59'},
+{name:'Tuna (canned)',category:'Canned',unit:'can',buy_price:1.25,tip:'Pantry protein'},
+{name:'Toilet Paper',category:'Household',unit:'roll',buy_price:0.50,tip:'Price per roll matters'},
+{name:'Paper Towels',category:'Household',unit:'roll',buy_price:0.75,tip:'Buy bulk under 0.75'},
+{name:'Aluminum Foil',category:'Household',unit:'box',buy_price:3.49,tip:'Track heavy vs regular'},
+{name:'Plastic Wrap',category:'Household',unit:'box',buy_price:2.99,tip:'For meal prep'},
+{name:'Ziplock Bags (gallon)',category:'Household',unit:'box',buy_price:3.99,tip:'For emergency layer'},
+{name:'Ziplock Bags (quart)',category:'Household',unit:'box',buy_price:3.49,tip:'For bases and supports'},
+{name:'Trash Bags',category:'Household',unit:'box',buy_price:6.99,tip:'Price per bag matters'},
+{name:'Dish Soap',category:'Household',unit:'bottle',buy_price:2.49,tip:'Concentrate lasts longer'},
+{name:'Laundry Detergent',category:'Household',unit:'bottle',buy_price:8.99,tip:'Price per load'},
+{name:'Parchment Paper',category:'Household',unit:'box',buy_price:3.49,tip:'For baking and freezer'},
 ];
-const UNITS=['lb','oz','each','can','gallon','dozen','bag','jar','box','pack','roll','bottle','sheet'];
 
-// ══════════════════════════════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════════════════════════════
-async function doSignup(){
-  const email=document.getElementById('auth-email')?.value?.trim();
-  const pass=document.getElementById('auth-pass')?.value;
-  if(!email||!pass){return showToast('Enter email and password');}
-  if(pass.length<6){return showToast('Password must be 6+ characters');}
-  try{
-    const r=await sb.auth('signup',email,pass);
-    if(r.error)return showToast(r.error.message||'Signup failed');
-    if(r.access_token){A.user=r.user;A.token=r.access_token;A.page='list';await loadData();render();}
-    else{showToast('Check your email to confirm your account, then log in.');}
-  }catch(e){showToast('Signup failed: '+e.message);}
-}
+// AUTH
+async function doSignup(){const e=document.getElementById('auth-email')?.value?.trim(),p=document.getElementById('auth-pass')?.value;if(!e||!p)return toast('Enter email and password');if(p.length<6)return toast('Password must be 6+ characters');try{const r=await sb.auth('signup',e,p);if(r.error)return toast(r.error.message);if(r.access_token){A.user=r.user;A.token=r.access_token;localStorage.setItem('pt_token',r.access_token);localStorage.setItem('pt_user',JSON.stringify(r.user));A.page='store_select';await loadData();render();}else toast('Check email to confirm, then log in.');}catch(x){toast('Signup failed');}}
+async function doLogin(){const e=document.getElementById('auth-email')?.value?.trim(),p=document.getElementById('auth-pass')?.value;if(!e||!p)return toast('Enter email and password');try{const r=await sb.auth('token?grant_type=password',e,p);if(r.error)return toast(r.error.message);if(r.access_token){A.user=r.user;A.token=r.access_token;localStorage.setItem('pt_token',r.access_token);localStorage.setItem('pt_refresh',r.refresh_token);localStorage.setItem('pt_user',JSON.stringify(r.user));A.page='store_select';await loadData();render();}}catch(x){toast('Login failed');}}
+function doLogout(){A.user=null;A.token=null;A.items=[];A.logs={};A.activeStore=null;localStorage.removeItem('pt_token');localStorage.removeItem('pt_refresh');localStorage.removeItem('pt_user');A.page='landing';render();}
+async function tryAutoLogin(){const t=localStorage.getItem('pt_token'),u=localStorage.getItem('pt_user');if(t&&u){A.token=t;A.user=JSON.parse(u);A.page='store_select';try{await loadData();}catch(e){loadLocal();}render();}else render();}
 
-async function doLogin(){
-  const email=document.getElementById('auth-email')?.value?.trim();
-  const pass=document.getElementById('auth-pass')?.value;
-  if(!email||!pass){return showToast('Enter email and password');}
-  try{
-    const r=await sb.auth('token?grant_type=password',email,pass);
-    if(r.error)return showToast(r.error.message||'Login failed');
-    if(r.access_token){
-      A.user=r.user;A.token=r.access_token;
-      localStorage.setItem('pt_token',r.access_token);
-      localStorage.setItem('pt_refresh',r.refresh_token);
-      localStorage.setItem('pt_user',JSON.stringify(r.user));
-      A.page='list';await loadData();render();
-    }
-  }catch(e){showToast('Login failed: '+e.message);}
-}
+// DATA
+async function loadData(){try{const items=await sb.rpc('price_tracker_items','GET',null,`?user_id=eq.${A.user.id}&order=name.asc`);A.items=items||[];if(A.items.length>0){const ids=A.items.map(i=>i.id).join(',');const logs=await sb.rpc('price_tracker_logs','GET',null,`?item_id=in.(${ids})&order=logged_date.desc`);A.logs={};(logs||[]).forEach(l=>{if(!A.logs[l.item_id])A.logs[l.item_id]=[];A.logs[l.item_id].push(l);});}syncPending();saveLocal();}catch(e){loadLocal();}}
+function saveLocal(){localStorage.setItem('pt_items',JSON.stringify(A.items));localStorage.setItem('pt_logs',JSON.stringify(A.logs));}
+function loadLocal(){try{A.items=JSON.parse(localStorage.getItem('pt_items')||'[]');A.logs=JSON.parse(localStorage.getItem('pt_logs')||'{}');}catch(e){}}
+async function addItem(name,cat,unit,bp){const item={user_id:A.user.id,name,category:cat,unit,buy_price:parseFloat(bp)};try{const r=await sb.rpc('price_tracker_items','POST',item);if(r&&r[0]){A.items.push(r[0]);A.logs[r[0].id]=[];saveLocal();render();toast(name+' added');return r[0];}}catch(e){toast('Failed to add');}return null;}
+async function deleteItem(id){try{await sb.rpc('price_tracker_logs','DELETE',null,`?item_id=eq.${id}`);await sb.rpc('price_tracker_items','DELETE',null,`?id=eq.${id}`);A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];saveLocal();A.page=A.activeStore?'shopping':'items';A.selectedItem=null;render();toast('Deleted');}catch(e){toast('Failed');}}
+async function addLog(itemId,totalPrice,store,pkgSize,date){store=normStore(store);if(!store)return toast('Pick a store first');if(!totalPrice||parseFloat(totalPrice)<=0)return toast('Enter the price');const pkg=parseFloat(pkgSize)||1;const perUnit=+(parseFloat(totalPrice)/pkg).toFixed(2);const log={item_id:itemId,user_id:A.user.id,price:perUnit,store,qty:pkg,package_size:pkg,logged_date:date||new Date().toISOString().split('T')[0]};try{const r=await sb.rpc('price_tracker_logs','POST',log);if(r&&r[0]){if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(r[0]);saveLocal();showResult(itemId,r[0]);return;}toast('Try again');}catch(e){log._pending=true;log.id='p_'+Date.now();if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(log);A._pendingLogs.push({...log});localStorage.setItem('pt_pending',JSON.stringify(A._pendingLogs));saveLocal();showResult(itemId,log);toast('Saved offline — will sync later');}}
+async function syncPending(){const p=JSON.parse(localStorage.getItem('pt_pending')||'[]');if(!p.length)return;const done=[];for(const l of p){try{const c={...l};delete c._pending;delete c.id;await sb.rpc('price_tracker_logs','POST',c);done.push(l.id);}catch(e){}}if(done.length){localStorage.setItem('pt_pending',JSON.stringify(p.filter(x=>!done.includes(x.id))));await loadData();}}
+async function deleteLog(itemId,logId){try{await sb.rpc('price_tracker_logs','DELETE',null,`?id=eq.${logId}`);A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);saveLocal();render();toast('Deleted');}catch(e){toast('Failed');}}
+async function updateBuyPrice(id,p){try{await sb.rpc('price_tracker_items','PATCH',{buy_price:parseFloat(p)},`?id=eq.${id}`);const it=A.items.find(i=>i.id===id);if(it)it.buy_price=parseFloat(p);saveLocal();render();toast('Updated');}catch(e){toast('Failed');}}
 
-function doLogout(){
-  A.user=null;A.token=null;A.items=[];A.logs={};
-  localStorage.removeItem('pt_token');localStorage.removeItem('pt_refresh');localStorage.removeItem('pt_user');
-  A.page='landing';render();
-}
+// HELPERS
+function normStore(s){if(!s||!s.trim())return'';return s.trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
+function getStores(){const s=new Set();Object.values(A.logs).forEach(logs=>logs.forEach(l=>s.add(l.store)));return[...s].sort();}
+function getSignal(pu,bp){if(pu<=bp)return'buy';if(pu<=bp*1.15)return'norm';return'pass';}
+function getBest(id){const l=A.logs[id]||[];if(!l.length)return null;return l.reduce((b,x)=>parseFloat(x.price)<parseFloat(b.price)?x:b,l[0]);}
+function getLastAt(id,store){return(A.logs[id]||[]).filter(l=>l.store===store).sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date))[0]||null;}
+function fmtD(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function showResult(id,log){A._logResult={itemId:id,log};A.modal='result';render();}
+function openLog(){if(!A.selectedItem&&A.items.length>0)A.selectedItem=A.items[0];A.modal='logPrice';render();}
+async function addAndLog(n,c,u,bp){const it=await addItem(n,c,u,bp);if(it){A.selectedItem=it;openLog();}}
+let _tt;function toast(m){let e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;max-width:340px;text-align:center';document.body.appendChild(e);}e.textContent=m;e.style.opacity='1';clearTimeout(_tt);_tt=setTimeout(()=>e.style.opacity='0',2500);}
 
-async function tryAutoLogin(){
-  const token=localStorage.getItem('pt_token');
-  const user=localStorage.getItem('pt_user');
-  if(token&&user){
-    A.token=token;A.user=JSON.parse(user);A.page='list';
-    try{await loadData();}catch(e){console.warn('Auto-load failed, using local');}
-    render();
-  }else{render();}
-}
-
-// ══════════════════════════════════════════════════════════════
-//  DATA OPERATIONS
-// ══════════════════════════════════════════════════════════════
-async function loadData(){
-  try{
-    const items=await sb.rpc('price_tracker_items','GET',null,`?user_id=eq.${A.user.id}&order=name.asc`);
-    A.items=items||[];
-    // Load all logs for all items
-    if(A.items.length>0){
-      const ids=A.items.map(i=>i.id).join(',');
-      const logs=await sb.rpc('price_tracker_logs','GET',null,`?item_id=in.(${ids})&order=logged_date.desc`);
-      A.logs={};
-      (logs||[]).forEach(l=>{
-        if(!A.logs[l.item_id])A.logs[l.item_id]=[];
-        A.logs[l.item_id].push(l);
-      });
-    }
-    saveLocal();
-  }catch(e){
-    console.warn('Remote load failed, trying local');
-    loadLocal();
-  }
-}
-
-function saveLocal(){
-  localStorage.setItem('pt_items',JSON.stringify(A.items));
-  localStorage.setItem('pt_logs',JSON.stringify(A.logs));
-}
-function loadLocal(){
-  try{
-    A.items=JSON.parse(localStorage.getItem('pt_items')||'[]');
-    A.logs=JSON.parse(localStorage.getItem('pt_logs')||'{}');
-  }catch(e){}
-}
-
-async function addItem(name,category,unit,buyPrice){
-  const item={user_id:A.user.id,name,category,unit,buy_price:parseFloat(buyPrice)};
-  try{
-    const r=await sb.rpc('price_tracker_items','POST',item);
-    if(r&&r[0]){A.items.push(r[0]);A.logs[r[0].id]=[];saveLocal();render();showToast('Item added');}
-  }catch(e){showToast('Failed to add: '+e.message);}
-}
-
-async function deleteItem(id){
-  try{
-    await sb.rpc('price_tracker_logs','DELETE',null,`?item_id=eq.${id}`);
-    await sb.rpc('price_tracker_items','DELETE',null,`?id=eq.${id}`);
-    A.items=A.items.filter(i=>i.id!==id);
-    delete A.logs[id];
-    saveLocal();A.page='list';A.selectedItem=null;render();showToast('Item deleted');
-  }catch(e){showToast('Failed to delete: '+e.message);}
-}
-
-async function addLog(itemId,price,store,qty,date){
-  if(!store||!store.trim()){showToast('Pick a store first');return;}
-  if(!price||parseFloat(price)<=0){showToast('Enter the price');return;}
-  const log={item_id:itemId,user_id:A.user.id,price:parseFloat(price),store:store.trim(),qty:parseFloat(qty)||1,logged_date:date||new Date().toISOString().split('T')[0]};
-  try{
-    const r=await sb.rpc('price_tracker_logs','POST',log);
-    if(r&&r[0]){
-      if(!A.logs[itemId])A.logs[itemId]=[];
-      A.logs[itemId].unshift(r[0]);
-      saveLocal();
-      // Navigate to item detail so user sees the result
-      A.selectedItem=A.items.find(i=>i.id===itemId);
-      A.page='detail';
-      render();
-      showToast('Price logged — '+store.trim()+' $'+parseFloat(price).toFixed(2));
-    }else{showToast('Something went wrong — try again');}
-  }catch(e){showToast('Failed to log: '+e.message);}
-}
-
-async function updateBuyPrice(itemId,newPrice){
-  try{
-    await sb.rpc('price_tracker_items','PATCH',{buy_price:parseFloat(newPrice)},`?id=eq.${itemId}`);
-    const item=A.items.find(i=>i.id===itemId);
-    if(item)item.buy_price=parseFloat(newPrice);
-    saveLocal();render();showToast('Buy price updated');
-  }catch(e){showToast('Failed to update: '+e.message);}
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════════════════
-function getStats(itemId){
-  const logs=A.logs[itemId]||[];
-  if(!logs.length)return{low:0,avg:0,high:0,last:0,lastDate:'',lastStore:'',count:0};
-  const prices=logs.map(l=>parseFloat(l.price));
-  const sorted=[...logs].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
-  return{
-    low:Math.min(...prices),
-    avg:+(prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2),
-    high:Math.max(...prices),
-    last:parseFloat(sorted[0].price),
-    lastDate:sorted[0].logged_date,
-    lastStore:sorted[0].store,
-    count:logs.length
-  };
-}
-
-function getSignal(price,buyPrice,avg){
-  if(price<=buyPrice)return'buy';
-  if(price<=avg*1.05)return'normal';
-  return'pass';
-}
-
-function getStores(){
-  const stores=new Set();
-  Object.values(A.logs).forEach(logs=>logs.forEach(l=>stores.add(l.store)));
-  return[...stores].sort();
-}
-
-function fmtDate(d){
-  if(!d)return'';
-  const dt=new Date(d+'T00:00:00');
-  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-function fmtDateShort(d){
-  if(!d)return'';
-  const dt=new Date(d+'T00:00:00');
-  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-
-function pctInRange(val,low,high){
-  const range=high-low||0.01;
-  return Math.max(0,Math.min(100,((val-low)/range)*100));
-}
-
-let toastTimer;
-function showToast(msg){
-  let el=document.getElementById('toast');
-  if(!el){el=document.createElement('div');el.id='toast';el.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;max-width:340px;text-align:center;';document.body.appendChild(el);}
-  el.textContent=msg;el.style.opacity='1';
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.style.opacity='0';},2500);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  RENDER
-// ══════════════════════════════════════════════════════════════
+// RENDER
 function render(){
   const app=document.getElementById('app');
-  if(A.page==='landing')app.innerHTML=rLanding();
-  else if(A.page==='list')app.innerHTML=rHeader()+rList()+rNav()+rModal();
-  else if(A.page==='detail')app.innerHTML=rHeader()+rDetail()+rNav()+rModal();
-  else if(A.page==='stores')app.innerHTML=rHeader()+rStores()+rNav()+rModal();
-  else if(A.page==='insights')app.innerHTML=rHeader()+rInsights()+rNav()+rModal();
+  let html='';
+  if(A.page==='landing'){app.innerHTML=rLanding();return;}
+  if(A.page==='store_select')html=rHdr('main')+rStoreSelect()+rNav();
+  else if(A.page==='shopping')html=rHdr('shop')+rShopping()+rNav();
+  else if(A.page==='items')html=rHdr('main')+rItems()+rNav();
+  else if(A.page==='detail')html=rHdr('detail')+rDetail()+rNav();
+  else if(A.page==='stores')html=rHdr('main')+rStoresView()+rNav();
+  else if(A.page==='insights')html=rHdr('main')+rInsights()+rNav();
+  app.innerHTML=html;
+  if(A.modal){const d=document.createElement('div');d.innerHTML=rModal();if(d.firstElementChild)app.appendChild(d.firstElementChild);}
 }
 
-// ─── LANDING ───
 function rLanding(){
-  return`<div class="landing">
-    <img src="data:image/png;base64,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" class="logo-img-lg" alt="Prep & Purpose">
-    <div class="landing-title">Price Tracker</div>
+  return`<div style="min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 24px;text-align:center">
+    <img src="${LOGO}" class="logo-lg" alt="Prep & Purpose">
+    <div style="font-size:26px;font-weight:800;color:var(--green);line-height:1.2;margin-bottom:8px">Price Tracker</div>
     <div style="font-size:12px;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px">Prep & Purpose</div>
-    <div class="landing-sub">Know your prices. Stop overpaying. Stock up when it matters.</div>
-
-    <div class="landing-feature">
-      <div class="landing-feature-icon">🟢</div>
-      <div class="landing-feature-text"><strong>Buy, hold, or pass</strong>Instant signals tell you if today's price is worth stocking up or walking past.</div>
+    <div style="font-size:15px;color:var(--text-muted);line-height:1.6;margin-bottom:24px;max-width:340px">Know your prices. Stop overpaying. Track groceries and household items store by store.</div>
+    <div style="text-align:left;max-width:340px;margin-bottom:24px">
+      <div style="display:flex;gap:10px;margin-bottom:12px"><span style="font-size:20px">🏪</span><div style="font-size:13px;line-height:1.5"><strong>Pick your store</strong><br>Open the app, tap where you are shopping.</div></div>
+      <div style="display:flex;gap:10px;margin-bottom:12px"><span style="font-size:20px">💰</span><div style="font-size:13px;line-height:1.5"><strong>Log the price</strong><br>Enter shelf price and pack size — the app calculates price per unit.</div></div>
+      <div style="display:flex;gap:10px;margin-bottom:12px"><span style="font-size:20px">🟢</span><div style="font-size:13px;line-height:1.5"><strong>Get the signal</strong><br>Stock up, normal, or pass — plus which store has it cheaper.</div></div>
     </div>
-    <div class="landing-feature">
-      <div class="landing-feature-icon">📊</div>
-      <div class="landing-feature-text"><strong>Your own price history</strong>Track what you actually pay — not what the store says is a "sale."</div>
-    </div>
-    <div class="landing-feature">
-      <div class="landing-feature-icon">🏪</div>
-      <div class="landing-feature-text"><strong>Store by store</strong>Know which store has the best price on every item you buy.</div>
-    </div>
-    <div class="landing-feature">
-      <div class="landing-feature-icon">💚</div>
-      <div class="landing-feature-text"><strong>Free to use</strong>No credit card. No catch. Built for families fighting food costs right now.</div>
-    </div>
-
-    <div class="auth-box">
+    <div style="width:100%;max-width:340px">
       <div class="lbl" style="text-align:left">Email</div>
       <input class="inp" id="auth-email" type="email" placeholder="your@email.com" style="margin-bottom:10px">
       <div class="lbl" style="text-align:left">Password</div>
       <input class="inp" id="auth-pass" type="password" placeholder="6+ characters" style="margin-bottom:16px">
-      <button class="btn btn-primary" id="auth-login-btn" onclick="doLogin()">Log In</button>
-      <div class="auth-toggle">Don't have an account? <button onclick="doSignup()">Sign up free</button></div>
+      <button class="btn btn-primary" onclick="doLogin()">Log In</button>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:16px">No account? <button style="background:none;border:none;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline" onclick="doSignup()">Sign up free</button></div>
     </div>
-
-    <div style="margin-top:40px;font-size:11px;color:var(--text-hint);line-height:1.6">
-      Prep & Purpose · prepandpurpose.com<br>
-      Steward what you have. Serve where you are.
-    </div>
+    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free to use — no credit card, no catch.<br>📱 Add to your home screen for quick access at the store.</div>
   </div>`;
 }
 
-// ─── HEADER ───
-function rHeader(){
-  if(A.page==='detail'&&A.selectedItem){
-    return`<div class="header">
-      <button class="header-back" onclick="A.page='list';A.selectedItem=null;render()">← Back</button>
-      <button class="header-btn" onclick="A.modal='logPrice';render()">+ Log Price</button>
-    </div>`;
-  }
-  return`<div class="header">
-    <div style="display:flex;align-items:center;gap:10px">
-      <img src="data:image/png;base64,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" class="logo-img" alt="P&P">
-      <div>
-        <div class="header-title">Price Tracker</div>
-        <div class="header-sub">Prep & Purpose</div>
-      </div>
-    </div>
-    <button class="header-btn" onclick="A.modal='addItem';render()">+ Add Item</button>
-  </div>`;
+function rHdr(mode){
+  if(mode==='shop')return`<div class="hdr"><div><div class="hdr-title">🏪 ${A.activeStore}</div><div class="hdr-sub">Tap items to log prices</div></div><button class="hdr-btn" onclick="A.activeStore=null;A.page='store_select';render()">Switch</button></div>`;
+  if(mode==='detail')return`<div class="hdr"><button class="hdr-back" onclick="A.page=A.activeStore?'shopping':'items';A.selectedItem=null;render()">← Back</button><button class="hdr-btn" onclick="openLog()">+ Log Price</button></div>`;
+  return`<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><img src="${LOGO}" class="logo" alt=""><div><div class="hdr-title">Price Tracker</div><div class="hdr-sub">Prep & Purpose</div></div></div></div>`;
 }
 
-// ─── ITEM LIST ───
-function rList(){
-  const filtered=A.items.filter(i=>
-    (A.filter==='All'||i.category===A.filter)&&
-    (!A.search||i.name.toLowerCase().includes(A.search.toLowerCase()))
-  );
-
-  // Sort: items with "buy" signal first, then by name
-  filtered.sort((a,b)=>{
-    const sa=getStats(a.id),sb2=getStats(b.id);
-    const sigA=sa.last?getSignal(sa.last,parseFloat(a.buy_price),sa.avg):'normal';
-    const sigB=sb2.last?getSignal(sb2.last,parseFloat(b.buy_price),sb2.avg):'normal';
-    const order={buy:0,normal:1,pass:2};
-    if(order[sigA]!==order[sigB])return order[sigA]-order[sigB];
-    return a.name.localeCompare(b.name);
+function rStoreSelect(){
+  const stores=getStores();
+  let h=`<div class="cnt" style="padding-top:16px">
+    <div class="home-prompt"><div style="font-size:22px;margin-bottom:8px">🛒</div><div style="font-size:18px;font-weight:800;margin-bottom:6px">Where are you shopping?</div><div style="font-size:13px;opacity:.85">Pick your store to start logging prices</div></div>`;
+  stores.forEach(s=>{
+    const ct=A.items.filter(i=>(A.logs[i.id]||[]).some(l=>l.store===s)).length;
+    h+=`<button class="store-btn" onclick="A.activeStore='${s}';A.page='shopping';render()"><span style="font-size:22px">🏪</span><div><div style="font-size:15px;font-weight:700">${s}</div><div style="font-size:11px;color:var(--text-muted)">${ct} item${ct!==1?'s':''} tracked</div></div></button>`;
   });
+  h+=`<button class="store-btn store-btn-add" onclick="A.modal='addStore';render()"><span style="font-size:22px">➕</span><div>Add New Store</div></button>`;
+  if(A.items.length===0)h+=`<div style="margin-top:24px;background:white;border-radius:var(--radius);padding:16px;border:1px solid var(--border)"><div style="font-size:15px;font-weight:800;margin-bottom:8px">Getting Started</div><div style="font-size:13px;color:var(--text-muted);line-height:1.7"><strong>1.</strong> Add a store you shop at<br><strong>2.</strong> Pick that store to start shopping<br><strong>3.</strong> Tap suggested items to add them<br><strong>4.</strong> Enter the shelf price<br><strong>5.</strong> The app tells you: stock up, pass, or go somewhere else</div></div>`;
+  h+=`</div>`;return h;
+}
 
-  let html=`<div class="content">
-    ${A.items.length<3?`<div style="background:var(--green);color:white;border-radius:14px;padding:18px 16px;margin:12px 0">
-      <div style="font-size:16px;font-weight:800;margin-bottom:8px">Welcome to Price Tracker</div>
-      <div style="font-size:13px;line-height:1.6;opacity:.9;margin-bottom:12px">This app helps you know your real prices so you never overpay. Here is how it works:</div>
-      <div style="font-size:12px;line-height:1.7;opacity:.85">
-        <strong>1. Add items you buy regularly</strong> — tap them from the Quick Start list below, or add your own.<br>
-        <strong>2. Set your buy price</strong> — this is the price where you stock up. Each starter item has a suggested price based on national averages.<br>
-        <strong>3. Log prices at the store</strong> — tap an item, hit + Log Price, enter what you are paying today. Takes 5 seconds.<br>
-        <strong>4. Watch the signals</strong> — 🟢 green means stock up, 🟡 yellow means normal, 🔴 red means pass if you can.<br>
-        <strong>5. Learn your stores</strong> — tap the 🏪 Stores tab to see all prices organized by store. The app tells you when another store had a better price.
-      </div>
-      <div style="font-size:11px;margin-top:12px;opacity:.7">The goal: stop guessing, start knowing. Your data, your prices, your decisions.</div>
-    </div>`:''}
-    <div style="padding-top:12px">
-      <input class="inp" placeholder="Search items..." value="${A.search}" oninput="A.search=this.value;render()">
-    </div>
-    <div class="filters">
-      ${['All',...CATEGORIES].map(c=>`<button class="filter-chip ${A.filter===c?'active':''}" onclick="A.filter='${c}';render()">${c}</button>`).join('')}
-    </div>`;
-
-  if(A.items.length<10){
-    // QUICK START — show starter items until user has 10+ items or dismisses
-    html+=`<div style="margin-bottom:16px">
-      <div style="font-size:18px;font-weight:800;margin-bottom:4px">Quick Start</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:16px">Tap the items you buy regularly. Each one comes with a suggested <strong>buy price</strong> — the price where you should stock up. You can adjust these later as you learn your own stores.</div>
-    </div>`;
-    const cats=[...new Set(STARTER_ITEMS.map(s=>s.category))];
-    cats.forEach(cat=>{
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 8px">${cat}</div>`;
-      STARTER_ITEMS.filter(s=>s.category===cat&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase())).forEach(s=>{
-        html+=`<div class="card" style="cursor:pointer;padding:12px 14px" onclick="addItem('${s.name}','${s.category}','${s.unit}','${s.buy_price}')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-size:14px;font-weight:700">${s.name}</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${s.tip}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0;margin-left:12px">
-              <div style="font-size:14px;font-weight:800;color:var(--green)">$${s.buy_price.toFixed(2)}</div>
-              <div style="font-size:10px;color:var(--text-hint)">per ${s.unit}</div>
-            </div>
-          </div>
-        </div>`;
-      });
-    });
-    html+=`<div style="text-align:center;margin-top:20px;padding:16px">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Don't see what you need?</div>
-      <button class="btn btn-outline btn-sm" onclick="A.modal='addItem';render()">+ Add Custom Item</button>
-      
-    </div>`;
-  }
-  // Always show "Browse Suggestions" button if user has items but wants more
-  if(A.items.length>=10){
-    html+=`<div style="text-align:center;padding:8px 0 12px">
-      <button class="btn btn-outline btn-sm" onclick="A.showSuggestions=!A.showSuggestions;render()">${A.showSuggestions?'Hide':'Browse'} Suggested Items</button>
-    </div>`;
-    if(A.showSuggestions){
-      const cats=[...new Set(STARTER_ITEMS.map(s=>s.category))];
-      cats.forEach(cat=>{
-        const available=STARTER_ITEMS.filter(s=>s.category===cat&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
-        if(available.length===0)return;
-        html+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px">${cat}</div>`;
-        available.forEach(s=>{
-          html+=`<div class="card" style="cursor:pointer;padding:10px 14px" onclick="addItem('${s.name}','${s.category}','${s.unit}','${s.buy_price}')">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:13px;font-weight:600">${s.name}</div>
-              <div style="font-size:12px;font-weight:700;color:var(--green)">$${s.buy_price.toFixed(2)}/${s.unit}</div>
-            </div>
-          </div>`;
-        });
-      });
-    }
-  }
-  if(filtered.length===0&&A.items.length>0){
-    html+=`<div class="empty">
-      <div class="empty-icon">🔍</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:6px">No matches</div>
-      <div style="font-size:13px">Try a different search or category.</div>
-    </div>`;
-  }
-
+function rShopping(){
+  const store=A.activeStore;
+  let h=`<div class="cnt" style="padding-top:8px">`;
+  h+=`<div style="display:flex;gap:6px;padding:4px 0 10px;overflow-x:auto">`;
+  ['All',...CATEGORIES].forEach(c=>{h+=`<button class="chip ${A.filter===c?'active':''}" onclick="A.filter='${c}';render()">${c}</button>`;});
+  h+=`</div>`;
+  const filtered=A.items.filter(i=>(A.filter==='All'||i.category===A.filter));
+  filtered.sort((a,b)=>a.name.localeCompare(b.name));
   filtered.forEach(item=>{
-    const stats=getStats(item.id);
     const bp=parseFloat(item.buy_price);
-    const signal=stats.last?getSignal(stats.last,bp,stats.avg):'none';
-    const cardClass=signal==='buy'?'card card-buy':signal==='pass'?'card card-pass':'card';
-
-    html+=`<div class="${cardClass}" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" style="cursor:pointer">
+    const last=getLastAt(item.id,store);
+    const best=getBest(item.id);
+    const lp=last?parseFloat(last.price):null;
+    const sig=lp?getSignal(lp,bp):null;
+    const bestP=best?parseFloat(best.price):null;
+    const better=best&&bestP&&lp&&best.store!==store&&bestP<lp;
+    const cls=sig==='buy'?'card card-buy':sig==='pass'?'card card-pass':'card';
+    h+=`<div class="${cls}" style="cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');openLog()">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${item.category} · per ${item.unit} · buy under $${bp.toFixed(2)}</div>
+          <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Buy under $${bp.toFixed(2)}/${item.unit}</div>
+          ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:3px">💡 $${bestP.toFixed(2)} at ${best.store}</div>`:''}
         </div>
         <div style="text-align:right;margin-left:12px;flex-shrink:0">
-          ${stats.last?`
-            <div style="font-size:18px;font-weight:800;color:${signal==='buy'?'var(--green-bright)':signal==='pass'?'var(--red)':'var(--text)'}">$${stats.last.toFixed(2)}</div>
-            <div class="signal signal-${signal}"><span class="signal-dot"></span>${signal==='buy'?'STOCK UP':signal==='pass'?'PASS':'NORMAL'}</div>
-          `:`<div style="font-size:12px;color:var(--text-hint)">No prices</div>`}
+          ${lp?`<div style="font-size:18px;font-weight:800;color:${sig==='buy'?'var(--green-bright)':sig==='pass'?'var(--red)':'var(--text)'}">$${lp.toFixed(2)}</div>
+            <div class="sig sig-${sig}"><span class="sig-dot"></span>${sig==='buy'?'STOCK UP':sig==='pass'?'PASS':'NORMAL'}</div>`
+          :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
         </div>
       </div>
-      ${stats.last?`
-        <div class="price-bar">
-          <div class="price-bar-fill" style="width:${pctInRange(stats.avg,stats.low,stats.high)}%"></div>
-          ${bp>stats.low?`<div class="price-bar-buy" style="left:${pctInRange(bp,stats.low,stats.high)}%"></div>`:''}
-          <div class="price-bar-current" style="left:${pctInRange(stats.last,stats.low,stats.high)}%;background:${signal==='buy'?'var(--green-bright)':signal==='pass'?'var(--red)':'var(--yellow)'}"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-hint);margin-top:2px">
-          <span>Low $${stats.low.toFixed(2)}</span><span>Avg $${stats.avg.toFixed(2)}</span><span>High $${stats.high.toFixed(2)}</span>
-        </div>
-      `:''}
     </div>`;
   });
-
-  html+=`</div>`;
-  return html;
-}
-
-// ─── DETAIL VIEW ───
-function rDetail(){
-  const item=A.selectedItem;
-  if(!item)return'';
-  const stats=getStats(item.id);
-  const bp=parseFloat(item.buy_price);
-  const signal=stats.last?getSignal(stats.last,bp,stats.avg):'normal';
-  const logs=(A.logs[item.id]||[]).sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
-
-  let html=`<div class="content" style="padding-top:16px">
-    <div style="margin-bottom:20px">
-      <div style="font-size:20px;font-weight:800">${item.name}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${item.category} · per ${item.unit} · buy under $${bp.toFixed(2)}</div>
-    </div>`;
-
-  // Current price card
-  if(stats.last){
-    const bgColor=signal==='buy'?'var(--green-light)':signal==='pass'?'var(--red-light)':'var(--yellow-light)';
-    html+=`<div style="background:${bgColor};border-radius:14px;padding:16px 18px;margin-bottom:16px;border:1px solid ${signal==='buy'?'rgba(42,128,32,.15)':signal==='pass'?'rgba(204,68,68,.15)':'rgba(184,134,11,.12)'}">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Last Price</div>
-          <div style="font-size:32px;font-weight:800;color:${signal==='buy'?'var(--green-bright)':signal==='pass'?'var(--red)':'var(--text)'};line-height:1.1;margin-top:4px">
-            $${stats.last.toFixed(2)}<span style="font-size:14px;font-weight:500;color:var(--text-muted)">/${item.unit}</span>
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${stats.lastStore} · ${fmtDateShort(stats.lastDate)}</div>
-        </div>
-        <div style="text-align:right">
-          <div class="signal signal-${signal}"><span class="signal-dot"></span>${signal==='buy'?'STOCK UP':signal==='pass'?'PASS':'NORMAL'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:6px">
-            ${signal==='buy'?'$'+(bp-stats.last).toFixed(2)+' under buy price':
-              signal==='pass'?'$'+(stats.last-stats.avg).toFixed(2)+' above average':
-              'At normal price'}
-          </div>
-        </div>
-      </div>
-      <div class="price-bar" style="margin-top:10px">
-        <div class="price-bar-fill" style="width:${pctInRange(stats.avg,stats.low,stats.high)}%"></div>
-        ${bp>stats.low?`<div class="price-bar-buy" style="left:${pctInRange(bp,stats.low,stats.high)}%"></div>`:''}
-        <div class="price-bar-current" style="left:${pctInRange(stats.last,stats.low,stats.high)}%;background:${signal==='buy'?'var(--green-bright)':signal==='pass'?'var(--red)':'var(--yellow)'}"></div>
-      </div>
-    </div>`;
-  }
-
-  // Stats row
-  html+=`<div class="stats-row">
-    <div class="stat-card"><div class="stat-label">Lowest</div><div class="stat-value" style="color:var(--green-bright)">${stats.low?'$'+stats.low.toFixed(2):'—'}</div></div>
-    <div class="stat-card"><div class="stat-label">Average</div><div class="stat-value" style="color:var(--yellow)">${stats.avg?'$'+stats.avg.toFixed(2):'—'}</div></div>
-    <div class="stat-card"><div class="stat-label">Highest</div><div class="stat-value" style="color:var(--red)">${stats.high?'$'+stats.high.toFixed(2):'—'}</div></div>
-  </div>`;
-
-  // Smart buy price nudge
-  if(stats.count>=3){
-    const suggestedBuy=+(stats.avg*0.8).toFixed(2);// 20% below their average
-    const currentBuy=parseFloat(item.buy_price);
-    if(Math.abs(suggestedBuy-currentBuy)>0.10){
-      html+=`<div class="alert" style="background:var(--yellow-light);border-color:rgba(184,134,11,.15)">
-        <span style="font-size:16px">💡</span>
-        <div style="font-size:12px;line-height:1.5">
-          <strong>Buy price suggestion:</strong> Based on your ${stats.count} logged prices, your average is $${stats.avg.toFixed(2)}. 
-          A buy price of <strong>$${suggestedBuy.toFixed(2)}</strong> (20% below your average) would catch the real deals.
-          <button style="display:block;margin-top:6px;background:none;border:none;color:var(--green);font-weight:700;font-size:12px;padding:0;cursor:pointer;text-decoration:underline" 
-            onclick="updateBuyPrice('${item.id}','${suggestedBuy}')">Set buy price to $${suggestedBuy.toFixed(2)}</button>
+  // Suggested items not yet added
+  const unadded=STARTER_ITEMS.filter(s=>(A.filter==='All'||s.category===A.filter)&&!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
+  if(unadded.length>0){
+    h+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Suggested — Tap to Add & Log</div>`;
+    unadded.forEach(s=>{
+      h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="addAndLog('${s.name}','${s.category}','${s.unit}',${s.buy_price})">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:14px;font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--text-muted)">${s.tip}</div></div>
+          <div style="font-size:12px;font-weight:700;color:var(--green);flex-shrink:0;margin-left:8px">$${s.buy_price.toFixed(2)}/${s.unit}</div>
         </div>
       </div>`;
-    }
+    });
   }
-
-  // Edit buy price
-  html+=`<div style="display:flex;gap:8px;margin-bottom:20px">
-    <button class="btn btn-outline btn-sm" onclick="A.modal='editItem';render()">Edit Buy Price</button>
-    <button class="btn btn-danger btn-sm" onclick="if(confirm('Delete this item and all its price history?'))deleteItem('${item.id}')">Delete Item</button>
-  </div>`;
-
-  // Price history
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Price History (${logs.length} entries)</div>`;
-
-  if(logs.length===0){
-    html+=`<div class="empty">
-      <div class="empty-icon">📝</div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px">No prices logged yet</div>
-      <div style="font-size:13px">Tap <strong>+ Log Price</strong> to add your first entry.</div>
-    </div>`;
-  }
-
-  logs.forEach(log=>{
-    const logSignal=getSignal(parseFloat(log.price),bp,stats.avg);
-    html+=`<div class="log-row">
-      <div>
-        <div style="font-size:13px;font-weight:600">${log.store}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${fmtDateShort(log.logged_date)}${log.qty>1?' · '+log.qty+' '+item.unit+'s':''}</div>
-      </div>
-      <div style="font-size:15px;font-weight:800;color:${logSignal==='buy'?'var(--green-bright)':logSignal==='pass'?'var(--red)':'var(--text)'}">$${parseFloat(log.price).toFixed(2)}</div>
-    </div>`;
-  });
-
-  html+=`</div>`;
-  return html;
+  h+=`<div style="text-align:center;padding:16px"><button class="btn btn-outline btn-sm" onclick="A.modal='addItem';render()">+ Custom Item</button></div></div>`;
+  return h;
 }
 
-// ─── INSIGHTS ───
-function rStores(){
-  const stores=getStores();
-  if(stores.length===0){
-    return`<div class="content" style="padding-top:16px">
-      <div style="font-size:20px;font-weight:800;margin-bottom:4px">Your Stores</div>
-      <div class="empty">
-        <div class="empty-icon">🏪</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:6px">No stores yet</div>
-        <div style="font-size:13px">Log your first price and the store will appear here automatically.</div>
-      </div>
-    </div>`;
-  }
-
-  let html=`<div class="content" style="padding-top:16px">
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Your Stores</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Tap a store to see all your prices there. Compare across stores to find the best deals.</div>`;
-
-  stores.forEach(store=>{
-    // Get all logs for this store with item info
-    const storeItems=[];
-    A.items.forEach(item=>{
-      const logs=(A.logs[item.id]||[]).filter(l=>l.store===store);
-      if(logs.length>0){
-        const sorted=[...logs].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));
-        const lastPrice=parseFloat(sorted[0].price);
-        // Find best price across ALL stores for comparison
-        const allLogs=A.logs[item.id]||[];
-        const bestLog=allLogs.length>0?allLogs.reduce((best,l)=>parseFloat(l.price)<parseFloat(best.price)?l:best,allLogs[0]):null;
-        const bestPrice=bestLog?parseFloat(bestLog.price):lastPrice;
-        const bestStore=bestLog?bestLog.store:store;
-        storeItems.push({item,lastPrice,lastDate:sorted[0].logged_date,bestPrice,bestStore,logCount:logs.length});
-      }
-    });
-
-    const isExpanded=A.expandedStore===store;
-    html+=`<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="A.expandedStore=A.expandedStore==='${store}'?null:'${store}';render()">
+function rItems(){
+  let h=`<div class="cnt" style="padding-top:12px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">My Items</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${A.items.length} item${A.items.length!==1?'s':''} tracked</div>
+    <input class="inp" placeholder="Search..." value="${A.search}" oninput="A.search=this.value;render()" style="margin-bottom:12px">`;
+  const f=A.items.filter(i=>!A.search||i.name.toLowerCase().includes(A.search.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name));
+  f.forEach(item=>{
+    const bp=parseFloat(item.buy_price);const best=getBest(item.id);
+    h+=`<div class="card" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:15px;font-weight:700">🏪 ${store}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${storeItems.length} item${storeItems.length!==1?'s':''} tracked</div>
-        </div>
-        <div style="font-size:14px;color:var(--text-muted)">${isExpanded?'▼':'▶'}</div>
+        <div><div style="font-size:14px;font-weight:700">${item.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${item.category} · $${bp.toFixed(2)}/${item.unit}${best?' · Best: $'+parseFloat(best.price).toFixed(2)+' at '+best.store:''}</div></div>
+        <div style="color:var(--text-muted)">▶</div>
       </div>
     </div>`;
-
-    if(isExpanded){
-      storeItems.sort((a,b)=>a.item.name.localeCompare(b.item.name));
-      storeItems.forEach(si=>{
-        const isBest=si.bestStore===store||si.lastPrice<=si.bestPrice;
-        const savings=si.lastPrice-si.bestPrice;
-        html+=`<div style="padding:10px 16px 10px 28px;background:white;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div>
-              <div style="font-size:13px;font-weight:600">${si.item.name}</div>
-              <div style="font-size:11px;color:var(--text-muted)">Last: ${fmtDateShort(si.lastDate)} · ${si.logCount} log${si.logCount!==1?'s':''}</div>
-              ${!isBest&&savings>0.05?`<div style="font-size:11px;color:var(--red);font-weight:600;margin-top:2px">💡 Save $${savings.toFixed(2)}/${si.item.unit} at ${si.bestStore}</div>`:''}
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:15px;font-weight:800;color:${isBest?'var(--green-bright)':'var(--text)'}">$${si.lastPrice.toFixed(2)}</div>
-              <div style="font-size:10px;color:var(--text-hint)">per ${si.item.unit}</div>
-            </div>
-          </div>
-        </div>`;
-      });
-    }
   });
+  const un=STARTER_ITEMS.filter(s=>!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase()));
+  if(un.length>0){
+    h+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:20px 0 8px">Suggested Items</div>`;
+    un.forEach(s=>{h+=`<div class="card" style="cursor:pointer;padding:10px 14px;border-style:dashed" onclick="addItem('${s.name}','${s.category}','${s.unit}',${s.buy_price})"><div style="display:flex;justify-content:space-between"><div style="font-size:13px;font-weight:600">${s.name}</div><div style="font-size:12px;font-weight:700;color:var(--green)">$${s.buy_price.toFixed(2)}/${s.unit}</div></div></div>`;});
+  }
+  h+=`<div style="text-align:center;padding:16px"><button class="btn btn-outline btn-sm" onclick="A.modal='addItem';render()">+ Custom Item</button></div></div>`;
+  return h;
+}
 
-  html+=`</div>`;
-  return html;
+function rDetail(){
+  const item=A.selectedItem;if(!item)return'';
+  const bp=parseFloat(item.buy_price),logs=(A.logs[item.id]||[]).sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date)),best=getBest(item.id);
+  let h=`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:20px;font-weight:800">${item.name}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${item.category} · per ${item.unit} · buy under $${bp.toFixed(2)}</div>
+    ${best?`<div style="font-size:13px;color:var(--green-bright);font-weight:600;margin-top:6px">Best: $${parseFloat(best.price).toFixed(2)}/${item.unit} at ${best.store} (${fmtD(best.logged_date)})</div>`:''}
+    <div style="display:flex;gap:8px;margin:16px 0">
+      <button class="btn btn-outline btn-sm" onclick="A.modal='editItem';render()">Edit Buy Price</button>
+      <button class="btn btn-sm" style="background:white;color:var(--red);border:1px solid var(--red)" onclick="if(confirm('Delete ${item.name}?'))deleteItem('${item.id}')">Delete</button>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">History (${logs.length})</div>`;
+  if(!logs.length)h+=`<div class="empty"><div style="font-size:36px">📝</div><div style="font-size:14px;font-weight:600;margin-top:8px">No prices yet</div></div>`;
+  logs.forEach(l=>{
+    const sig=getSignal(parseFloat(l.price),bp),pkg=parseFloat(l.package_size||l.qty||1),total=(parseFloat(l.price)*pkg).toFixed(2);
+    h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:13px;font-weight:600">${l.store}</div><div style="font-size:11px;color:var(--text-muted)">${fmtD(l.logged_date)}${pkg>1?' · '+pkg+' '+item.unit+'s · $'+total+' total':''}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:15px;font-weight:800;color:${sig==='buy'?'var(--green-bright)':sig==='pass'?'var(--red)':'var(--text)'}">$${parseFloat(l.price).toFixed(2)}<span style="font-size:10px;color:var(--text-hint)">/${item.unit}</span></div>
+        <button style="background:none;border:none;color:var(--text-hint);font-size:16px;cursor:pointer;padding:4px" onclick="event.stopPropagation();if(confirm('Delete?'))deleteLog('${item.id}','${l.id}')">×</button>
+      </div>
+    </div>`;
+  });
+  h+=`</div>`;return h;
+}
+
+function rStoresView(){
+  const stores=getStores();
+  let h=`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">Your Stores</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Compare prices across stores</div>`;
+  if(!stores.length)h+=`<div class="empty"><div style="font-size:36px">🏪</div><div style="font-size:14px;font-weight:600;margin-top:8px">No stores yet</div><div style="font-size:13px;margin-top:4px">Go to Shop and add your first store</div></div>`;
+  stores.forEach(store=>{
+    const si=[];
+    A.items.forEach(item=>{const ls=(A.logs[item.id]||[]).filter(l=>l.store===store);if(ls.length){const s=[...ls].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date));const lp=parseFloat(s[0].price);const best=getBest(item.id);si.push({item,lp,date:s[0].logged_date,bestP:best?parseFloat(best.price):lp,bestS:best?best.store:store});}});
+    const exp=A.expandedStore===store;
+    h+=`<div class="card" style="cursor:pointer" onclick="A.expandedStore=A.expandedStore==='${store}'?null:'${store}';render()">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:15px;font-weight:700">🏪 ${store}</div><div style="font-size:11px;color:var(--text-muted)">${si.length} item${si.length!==1?'s':''}</div></div>
+        <div style="color:var(--text-muted)">${exp?'▼':'▶'}</div>
+      </div>
+    </div>`;
+    if(exp){si.sort((a,b)=>a.item.name.localeCompare(b.item.name));si.forEach(x=>{
+      const isBest=x.bestS===store||x.lp<=x.bestP;const sav=(x.lp-x.bestP).toFixed(2);
+      h+=`<div style="padding:10px 16px 10px 28px;background:white;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div style="font-size:13px;font-weight:600">${x.item.name}</div><div style="font-size:11px;color:var(--text-muted)">${fmtD(x.date)}</div>
+            ${!isBest&&parseFloat(sav)>0.05?`<div style="font-size:11px;color:var(--green-bright);font-weight:600">💡 Save $${sav}/${x.item.unit} at ${x.bestS}</div>`:''}</div>
+          <div style="font-size:15px;font-weight:800;color:${isBest?'var(--green-bright)':'var(--text)'}">$${x.lp.toFixed(2)}/${x.item.unit}</div>
+        </div>
+      </div>`;})}
+  });
+  h+=`</div>`;return h;
 }
 
 function rInsights(){
-  const stores=getStores();
-  // Find items at buy price
-  const deals=A.items.filter(item=>{
-    const stats=getStats(item.id);
-    return stats.last&&stats.last<=parseFloat(item.buy_price);
-  });
-
-  let html=`<div class="content" style="padding-top:16px">
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px">Insights</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Patterns from your price data.</div>`;
-
-  // Stock up alerts
-  if(deals.length>0){
-    html+=`<div class="alert"><span style="font-size:18px">🟢</span><div><strong style="font-size:14px">Stock Up Now</strong><br>${deals.map(d=>{
-      const stats=getStats(d.id);
-      return`${d.name} — $${stats.last.toFixed(2)}/${d.unit} at ${stats.lastStore} (your buy price: $${parseFloat(d.buy_price).toFixed(2)})`;
-    }).join('<br>')}</div></div>`;
-  }else{
-    html+=`<div style="background:white;border-radius:var(--radius);padding:20px;text-align:center;border:1px solid var(--border);margin-bottom:16px">
-      <div style="font-size:24px;margin-bottom:8px">📊</div>
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px">No stock-up deals right now</div>
-      <div style="font-size:12px;color:var(--text-muted)">Keep logging prices and you'll see alerts here when items hit your buy price.</div>
-    </div>`;
-  }
-
-  // Stores tracked
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:20px 0 10px">Your Stores (${stores.length})</div>`;
-  if(stores.length>0){
-    stores.forEach(store=>{
-      // Count logs for this store
-      let count=0;
-      Object.values(A.logs).forEach(logs=>logs.forEach(l=>{if(l.store===store)count++;}));
-      html+=`<div class="card" style="padding:10px 14px;margin-bottom:4px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:14px;font-weight:600">🏪 ${store}</div>
-          <div style="font-size:12px;color:var(--text-muted)">${count} price${count!==1?'s':''} logged</div>
-        </div>
-      </div>`;
-    });
-  }else{
-    html+=`<div style="font-size:13px;color:var(--text-muted)">Stores appear here after you log your first price.</div>`;
-  }
-
-  // Summary stats
-  let totalLogs=0;
-  Object.values(A.logs).forEach(l=>totalLogs+=l.length);
-  html+=`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:24px 0 10px">Summary</div>
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-label">Items</div><div class="stat-value" style="color:var(--green)">${A.items.length}</div></div>
-    <div class="stat-card"><div class="stat-label">Prices Logged</div><div class="stat-value" style="color:var(--green)">${totalLogs}</div></div>
-    <div class="stat-card"><div class="stat-label">Stores</div><div class="stat-value" style="color:var(--green)">${stores.length}</div></div>
-  </div>`;
-
-  html+=`<button class="btn btn-outline" style="margin-top:20px;font-size:13px;color:var(--red);border-color:var(--red)" onclick="if(confirm('Sign out?'))doLogout()">Sign Out</button>`;
-  html+=`</div>`;
-  return html;
+  let tl=0;Object.values(A.logs).forEach(l=>tl+=l.length);const stores=getStores();
+  let h=`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:16px">More</div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <div class="card" style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Items</div><div style="font-size:22px;font-weight:800;color:var(--green);margin-top:4px">${A.items.length}</div></div>
+      <div class="card" style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Logged</div><div style="font-size:22px;font-weight:800;color:var(--green);margin-top:4px">${tl}</div></div>
+      <div class="card" style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Stores</div><div style="font-size:22px;font-weight:800;color:var(--green);margin-top:4px">${stores.length}</div></div>
+    </div>
+    <div style="padding:16px;background:white;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px">📱 Add to Home Screen</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>iPhone:</strong> Tap share → Add to Home Screen<br><strong>Android:</strong> Tap menu → Add to Home Screen</div>
+    </div>
+    <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)" onclick="if(confirm('Sign out?'))doLogout()">Sign Out</button>
+  </div>`;return h;
 }
 
-// ─── NAV ───
 function rNav(){
-  return`<div class="bottom-nav">
-    <button class="nav-btn ${A.page==='list'?'active':''}" onclick="A.page='list';A.selectedItem=null;render()">
-      <span class="nav-btn-icon">📋</span>Items
-    </button>
-    <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()">
-      <span class="nav-btn-icon">🏪</span>Stores
-    </button>
-    <button class="nav-btn ${A.page==='insights'?'active':''}" onclick="A.page='insights';render()">
-      <span class="nav-btn-icon">📊</span>Insights
-    </button>
+  return`<div class="nav">
+    <button class="nav-btn ${A.page==='store_select'||A.page==='shopping'?'active':''}" onclick="A.page=A.activeStore?'shopping':'store_select';render()"><span class="nav-i">🛒</span>Shop</button>
+    <button class="nav-btn ${A.page==='items'||A.page==='detail'?'active':''}" onclick="A.page='items';A.selectedItem=null;render()"><span class="nav-i">📋</span>Items</button>
+    <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()"><span class="nav-i">🏪</span>Stores</button>
+    <button class="nav-btn ${A.page==='insights'?'active':''}" onclick="A.page='insights';render()"><span class="nav-i">⚙️</span>More</button>
   </div>`;
 }
 
-// ─── MODALS ───
 function rModal(){
-  if(!A.modal)return'';
+  if(A.modal==='addStore')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-title">Add New Store</div>
+    <div class="lbl">Store Name</div>
+    <input class="inp" id="m-sn" placeholder="e.g. Harris Teeter, Aldi, Walmart" style="margin-bottom:16px">
+    <button class="btn btn-primary" onclick="const n=normStore(document.getElementById('m-sn').value);if(!n)return toast('Enter a name');A.activeStore=n;A.page='shopping';A.modal=null;render();toast(n+' added')">Add & Start Shopping</button>
+  </div></div>`;
 
-  if(A.modal==='addItem'){
-    return`<div class="modal-overlay" onclick="A.modal=null;render()">
-      <div class="modal-sheet" onclick="event.stopPropagation()">
-        <div class="modal-title">Add New Item</div>
-        <div class="lbl">Item Name</div>
-        <input class="inp" id="m-name" placeholder="e.g. Pork Butt (Boston)" style="margin-bottom:10px">
-        <div class="row" style="margin-bottom:10px">
-          <div style="flex:1">
-            <div class="lbl">Category</div>
-            <select class="inp" id="m-cat">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
-          </div>
-          <div style="width:90px">
-            <div class="lbl">Unit</div>
-            <select class="inp" id="m-unit">${UNITS.map(u=>`<option>${u}</option>`).join('')}</select>
-          </div>
-        </div>
-        <div class="lbl">Buy Price (stock up below this)</div>
-        <input class="inp" id="m-buy" type="number" step="0.01" placeholder="e.g. 1.10" style="margin-bottom:16px">
-        <button class="btn btn-primary" onclick="addItem(
-          document.getElementById('m-name').value,
-          document.getElementById('m-cat').value,
-          document.getElementById('m-unit').value,
-          document.getElementById('m-buy').value
-        );A.modal=null;">Add Item</button>
-      </div>
-    </div>`;
-  }
+  if(A.modal==='addItem')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-title">Add Custom Item</div>
+    <div class="lbl">Item Name</div>
+    <input class="inp" id="m-n" placeholder="e.g. Pork Butt" style="margin-bottom:10px">
+    <div class="row" style="margin-bottom:10px">
+      <div style="flex:1"><div class="lbl">Category</div><select class="inp" id="m-c">${CATEGORIES.map(c=>'<option>'+c+'</option>').join('')}</select></div>
+      <div style="width:90px"><div class="lbl">Unit</div><select class="inp" id="m-u">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select></div>
+    </div>
+    <div class="lbl">Buy Price (stock up below this)</div>
+    <input class="inp" id="m-bp" type="number" step="0.01" placeholder="1.99" style="margin-bottom:16px">
+    <button class="btn btn-primary" onclick="addItem(document.getElementById('m-n').value,document.getElementById('m-c').value,document.getElementById('m-u').value,document.getElementById('m-bp').value);A.modal=null;">Add Item</button>
+  </div></div>`;
 
   if(A.modal==='logPrice'&&A.selectedItem){
-    const stores=getStores();
-    const item=A.selectedItem;
-    const selectedStore=A._logStore||'';
-    return`<div class="modal-overlay" onclick="A.modal=null;A._logStore=null;render()">
-      <div class="modal-sheet" onclick="event.stopPropagation()">
-        <div class="modal-title">Log Price — ${item.name}</div>
+    const item=A.selectedItem,stores=getStores(),best=getBest(item.id),store=A.activeStore;
+    let m=`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">${item.name}</div>
+      ${best?`<div style="background:var(--green-light);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.5"><strong>Best price:</strong> $${parseFloat(best.price).toFixed(2)}/${item.unit} at ${best.store} (${fmtD(best.logged_date)})</div>`:''}`;
+    if(!store){
+      m+=`<div class="lbl">1. Store <span class="req">*</span></div>`;
+      if(stores.length>0){
+        m+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
+        stores.forEach(s=>{m+=`<button class="chip ${A._logStore===s?'active':''}" onclick="A._logStore='${s}';render()">${s}</button>`;});
+        m+=`<button class="chip" style="border-style:dashed" onclick="A._logStore='_new';render()">+ New</button></div>`;
+        if(A._logStore==='_new')m+=`<input class="inp" id="m-ns" placeholder="Store name" style="margin-bottom:10px">`;
+      }else{m+=`<input class="inp" id="m-ns" placeholder="e.g. Harris Teeter" style="margin-bottom:10px">`;}
+    }
+    m+=`<div class="lbl">${store?'1':'2'}. Shelf price <span class="req">*</span></div>
+      <input class="inp inp-lg" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" style="margin-bottom:10px">
+      <div class="lbl">${store?'2':'3'}. Pack size (${item.unit}s in this package)</div>
+      <input class="inp" id="m-pk" type="number" step="0.01" value="1" style="margin-bottom:4px">
+      <div style="font-size:11px;color:var(--text-hint);margin-bottom:12px">Meat = weight in ${item.unit}s · Packs = count (12 rolls, etc.)</div>
+      <button class="btn btn-primary" onclick="
+        const s='${store||''}'||A._logStore||(document.getElementById('m-ns')?document.getElementById('m-ns').value:'');
+        addLog('${item.id}',document.getElementById('m-p').value,s,document.getElementById('m-pk').value);
+        A._logStore=null;A.modal=null;
+      ">Log Price</button>
+    </div></div>`;
+    return m;
+  }
 
-        <!-- STEP 1: PICK YOUR STORE -->
-        <div class="lbl">1. Where are you shopping? <span style="color:var(--red)">*</span></div>
-        ${stores.length>0?`
-          <div class="store-chips" style="margin-bottom:8px">
-            ${stores.map(s=>`<button class="store-chip ${selectedStore===s?'active':''}" onclick="A._logStore='${s}';document.getElementById('m-store-new').value='';render()">${s}</button>`).join('')}
-            <button class="store-chip ${selectedStore==='_new'?'active':''}" onclick="A._logStore='_new';render()" style="border-style:dashed">+ New Store</button>
-          </div>
-          ${selectedStore==='_new'?`<input class="inp" id="m-store-new" placeholder="Type new store name" style="margin-bottom:10px" oninput="A._logStore=this.value||'_new'">`:''}
-        `:`
-          <input class="inp" id="m-store-new" placeholder="Type store name (e.g. Aldi, Food Lion)" style="margin-bottom:10px" oninput="A._logStore=this.value">
-          <div style="font-size:11px;color:var(--text-hint);margin:-6px 0 10px">Type it once — next time it will appear as a quick-tap button.</div>
-        `}
-
-        <!-- PRICE COMPARISON -->
-        ${(()=>{
-          const _allLogs=A.logs[item.id]||[];
-          if(_allLogs.length===0)return'';
-          const _best=_allLogs.reduce((b,l)=>parseFloat(l.price)<parseFloat(b.price)?l:b,_allLogs[0]);
-          const _recent=[..._allLogs].sort((a,b)=>new Date(b.logged_date)-new Date(a.logged_date))[0];
-          return`<div style="background:var(--green-light);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.5">
-            <strong>Your best price:</strong> $${parseFloat(_best.price).toFixed(2)}/${item.unit} at ${_best.store} (${fmtDateShort(_best.logged_date)})<br>
-            <strong>Last logged:</strong> $${parseFloat(_recent.price).toFixed(2)}/${item.unit} at ${_recent.store} (${fmtDateShort(_recent.logged_date)})
-          </div>`;
-        })()}
-
-        <!-- STEP 2: ENTER PRICE -->
-        <div class="lbl">2. Price per ${item.unit} <span style="color:var(--red)">*</span></div>
-        <input class="inp inp-price" id="m-price" type="number" step="0.01" placeholder="0.00" style="margin-bottom:10px" inputmode="decimal">
-
-        <!-- STEP 3: OPTIONAL DETAILS -->
-        <div class="row" style="margin-bottom:10px">
-          <div style="flex:1">
-            <div class="lbl">Qty bought (${item.unit}s)</div>
-            <input class="inp" id="m-qty" type="number" value="1" style="margin-bottom:0">
-          </div>
-          <div style="flex:1">
-            <div class="lbl">Date</div>
-            <input class="inp" id="m-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="margin-bottom:0">
-          </div>
-        </div>
-
-        <button class="btn btn-primary" style="margin-top:6px" onclick="
-          const _store=A._logStore==='_new'?(document.getElementById('m-store-new')?.value||''):(A._logStore||document.getElementById('m-store-new')?.value||'');
-          addLog('${item.id}',document.getElementById('m-price').value,_store,document.getElementById('m-qty').value,document.getElementById('m-date').value);
-          A._logStore=null;A.modal=null;
-        ">Log Price</button>
+  if(A.modal==='result'&&A._logResult){
+    const r=A._logResult,item=A.items.find(i=>i.id===r.itemId);
+    if(!item){A.modal=null;return'';}
+    const bp=parseFloat(item.buy_price),pu=parseFloat(r.log.price),sig=getSignal(pu,bp);
+    const best=getBest(item.id),better=best&&best.store!==r.log.store&&parseFloat(best.price)<pu;
+    const pkg=parseFloat(r.log.package_size||r.log.qty||1);
+    return`<div class="modal-overlay" onclick="A.modal=null;A._logResult=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="result-card ${sig==='buy'?'result-buy':sig==='pass'?'result-pass':'result-norm'}">
+        <div style="font-size:36px;margin-bottom:8px">${sig==='buy'?'🟢':sig==='pass'?'🔴':'🟡'}</div>
+        <div style="font-size:22px;font-weight:800">${sig==='buy'?'STOCK UP':sig==='pass'?'PASS':'NORMAL PRICE'}</div>
+        <div style="font-size:28px;font-weight:800;margin:8px 0">$${pu.toFixed(2)}<span style="font-size:14px;font-weight:500;color:var(--text-muted)">/${item.unit}</span></div>
+        <div style="font-size:13px;color:var(--text-muted)">${item.name} at ${r.log.store}</div>
+        ${pkg>1?`<div style="font-size:12px;color:var(--text-muted);margin-top:4px">$${(pu*pkg).toFixed(2)} total for ${pkg} ${item.unit}s</div>`:''}
       </div>
-    </div>`;
+      ${sig==='buy'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--green-bright);margin-bottom:12px">At or below your buy price of $${bp.toFixed(2)} — grab extra!</div>`:''}
+      ${sig==='pass'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--red);margin-bottom:12px">Above your buy price of $${bp.toFixed(2)} — skip if you can.</div>`:''}
+      ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${parseFloat(best.price).toFixed(2)}/${item.unit} at ${best.store}</strong><br>$${(pu-parseFloat(best.price)).toFixed(2)}/${item.unit} cheaper</div>`:''}
+      <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
+    </div></div>`;
   }
 
   if(A.modal==='editItem'&&A.selectedItem){
     const item=A.selectedItem;
-    return`<div class="modal-overlay" onclick="A.modal=null;render()">
-      <div class="modal-sheet" onclick="event.stopPropagation()">
-        <div class="modal-title">Edit Buy Price — ${item.name}</div>
-        <div class="lbl">Buy Price (stock up below this)</div>
-        <input class="inp" id="m-editbuy" type="number" step="0.01" value="${parseFloat(item.buy_price).toFixed(2)}" style="margin-bottom:16px">
-        <button class="btn btn-primary" onclick="updateBuyPrice('${item.id}',document.getElementById('m-editbuy').value);A.modal=null;A.selectedItem=A.items.find(i=>i.id==='${item.id}');">Update</button>
-      </div>
-    </div>`;
+    return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Edit Buy Price</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">${item.name}</div>
+      <div class="lbl">Buy Price (stock up below this)</div>
+      <input class="inp" id="m-eb" type="number" step="0.01" value="${parseFloat(item.buy_price).toFixed(2)}" style="margin-bottom:16px">
+      <button class="btn btn-primary" onclick="updateBuyPrice('${item.id}',document.getElementById('m-eb').value);A.modal=null;A.selectedItem=A.items.find(i=>i.id==='${item.id}');">Update</button>
+    </div></div>`;
   }
-
   return'';
 }
 
-// ══════════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════════
 tryAutoLogin();
-</script>
-</body>
-</html>
+</script></body></html>
