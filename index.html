@@ -381,14 +381,21 @@ async function deleteItem(id){
 }
 
 async function addLog(itemId,price,store,qty,date){
-  const log={item_id:itemId,user_id:A.user.id,price:parseFloat(price),store,qty:parseFloat(qty)||1,logged_date:date||new Date().toISOString().split('T')[0]};
+  if(!store||!store.trim()){showToast('Pick a store first');return;}
+  if(!price||parseFloat(price)<=0){showToast('Enter the price');return;}
+  const log={item_id:itemId,user_id:A.user.id,price:parseFloat(price),store:store.trim(),qty:parseFloat(qty)||1,logged_date:date||new Date().toISOString().split('T')[0]};
   try{
     const r=await sb.rpc('price_tracker_logs','POST',log);
     if(r&&r[0]){
       if(!A.logs[itemId])A.logs[itemId]=[];
       A.logs[itemId].unshift(r[0]);
-      saveLocal();render();showToast('Price logged');
-    }
+      saveLocal();
+      // Navigate to item detail so user sees the result
+      A.selectedItem=A.items.find(i=>i.id===itemId);
+      A.page='detail';
+      render();
+      showToast('Price logged — '+store.trim()+' $'+parseFloat(price).toFixed(2));
+    }else{showToast('Something went wrong — try again');}
   }catch(e){showToast('Failed to log: '+e.message);}
 }
 
@@ -943,17 +950,25 @@ function rModal(){
   if(A.modal==='logPrice'&&A.selectedItem){
     const stores=getStores();
     const item=A.selectedItem;
-    return`<div class="modal-overlay" onclick="A.modal=null;render()">
+    const selectedStore=A._logStore||'';
+    return`<div class="modal-overlay" onclick="A.modal=null;A._logStore=null;render()">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-title">Log Price — ${item.name}</div>
+
+        <!-- STEP 1: PICK YOUR STORE -->
+        <div class="lbl">1. Where are you shopping? <span style="color:var(--red)">*</span></div>
         ${stores.length>0?`
-          <div class="lbl">Quick Pick Store</div>
-          <div class="store-chips" id="store-chips">
-            ${stores.map(s=>`<button class="store-chip" onclick="document.getElementById('m-store').value='${s}';document.querySelectorAll('.store-chip').forEach(c=>c.classList.remove('active'));this.classList.add('active')">${s}</button>`).join('')}
+          <div class="store-chips" style="margin-bottom:8px">
+            ${stores.map(s=>`<button class="store-chip ${selectedStore===s?'active':''}" onclick="A._logStore='${s}';document.getElementById('m-store-new').value='';render()">${s}</button>`).join('')}
+            <button class="store-chip ${selectedStore==='_new'?'active':''}" onclick="A._logStore='_new';render()" style="border-style:dashed">+ New Store</button>
           </div>
-        `:''}
-        <div class="lbl">Store</div>
-        <input class="inp" id="m-store" placeholder="Store name" value="${stores[0]||''}" style="margin-bottom:10px">
+          ${selectedStore==='_new'?`<input class="inp" id="m-store-new" placeholder="Type new store name" style="margin-bottom:10px" oninput="A._logStore=this.value||'_new'">`:''}
+        `:`
+          <input class="inp" id="m-store-new" placeholder="Type store name (e.g. Aldi, Food Lion)" style="margin-bottom:10px" oninput="A._logStore=this.value">
+          <div style="font-size:11px;color:var(--text-hint);margin:-6px 0 10px">Type it once — next time it will appear as a quick-tap button.</div>
+        `}
+
+        <!-- PRICE COMPARISON -->
         ${(()=>{
           const _allLogs=A.logs[item.id]||[];
           if(_allLogs.length===0)return'';
@@ -964,11 +979,15 @@ function rModal(){
             <strong>Last logged:</strong> $${parseFloat(_recent.price).toFixed(2)}/${item.unit} at ${_recent.store} (${fmtDateShort(_recent.logged_date)})
           </div>`;
         })()}
-        <div class="lbl">Price per ${item.unit}</div>
+
+        <!-- STEP 2: ENTER PRICE -->
+        <div class="lbl">2. Price per ${item.unit} <span style="color:var(--red)">*</span></div>
         <input class="inp inp-price" id="m-price" type="number" step="0.01" placeholder="0.00" style="margin-bottom:10px" inputmode="decimal">
+
+        <!-- STEP 3: OPTIONAL DETAILS -->
         <div class="row" style="margin-bottom:10px">
           <div style="flex:1">
-            <div class="lbl">Quantity (${item.unit}s)</div>
+            <div class="lbl">Qty bought (${item.unit}s)</div>
             <input class="inp" id="m-qty" type="number" value="1" style="margin-bottom:0">
           </div>
           <div style="flex:1">
@@ -976,13 +995,12 @@ function rModal(){
             <input class="inp" id="m-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="margin-bottom:0">
           </div>
         </div>
-        <button class="btn btn-primary" style="margin-top:6px" onclick="addLog(
-          '${item.id}',
-          document.getElementById('m-price').value,
-          document.getElementById('m-store').value,
-          document.getElementById('m-qty').value,
-          document.getElementById('m-date').value
-        );A.modal=null;">Log Price</button>
+
+        <button class="btn btn-primary" style="margin-top:6px" onclick="
+          const _store=A._logStore==='_new'?(document.getElementById('m-store-new')?.value||''):(A._logStore||document.getElementById('m-store-new')?.value||'');
+          addLog('${item.id}',document.getElementById('m-price').value,_store,document.getElementById('m-qty').value,document.getElementById('m-date').value);
+          A._logStore=null;A.modal=null;
+        ">Log Price</button>
       </div>
     </div>`;
   }
