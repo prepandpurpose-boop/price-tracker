@@ -76,7 +76,7 @@ const STATES={
 const STATE_LIST=Object.keys(STATES).sort();
 
 const A={page:'welcome',activeStore:null,items:[],logs:{},stores:[],search:'',selectedItem:null,expandedStore:null,modal:null,_logResult:null,userState:null};
-const UNITS=['lb','oz','count','each','can','gallon','dozen','bag','jar','box','pack','roll','bottle'];
+const UNITS=['lb','oz','gallon','dozen','count','loaf'];
 const STARTERS=[
 {name:'Pork Butt',cat:'Protein',unit:'lb',bp:3.29},
 {name:'Chicken Thighs (bone-in)',cat:'Protein',unit:'lb',bp:2.79},
@@ -102,23 +102,23 @@ const STARTERS=[
 {name:'Sugar',cat:'Pantry',unit:'lb',bp:0.69},
 {name:'Rice',cat:'Pantry',unit:'lb',bp:0.79},
 {name:'Oats',cat:'Pantry',unit:'lb',bp:0.29},
-{name:'Pasta',cat:'Pantry',unit:'box',bp:1.49},
-{name:'Black Beans',cat:'Canned',unit:'can',bp:1.09},
-{name:'Pinto Beans',cat:'Canned',unit:'can',bp:1.09},
-{name:'Diced Tomatoes',cat:'Canned',unit:'can',bp:1.19},
-{name:'Corn (canned)',cat:'Canned',unit:'can',bp:0.99},
-{name:'Tomato Sauce',cat:'Canned',unit:'can',bp:0.69},
-{name:'Tuna',cat:'Canned',unit:'can',bp:1.49},
-{name:'Toilet Paper',cat:'Household',unit:'roll',bp:0.65},
-{name:'Paper Towels',cat:'Household',unit:'roll',bp:0.89},
-{name:'Aluminum Foil',cat:'Household',unit:'box',bp:4.29},
-{name:'Plastic Wrap',cat:'Household',unit:'box',bp:3.49},
-{name:'Ziplock Bags (gallon)',cat:'Household',unit:'box',bp:4.99},
-{name:'Ziplock Bags (quart)',cat:'Household',unit:'box',bp:4.49},
-{name:'Trash Bags',cat:'Household',unit:'box',bp:8.49},
-{name:'Dish Soap',cat:'Household',unit:'bottle',bp:3.29},
-{name:'Laundry Detergent',cat:'Household',unit:'bottle',bp:10.99},
-{name:'Parchment Paper',cat:'Household',unit:'box',bp:4.29},
+{name:'Pasta',cat:'Pantry',unit:'count',bp:1.49},
+{name:'Black Beans',cat:'Canned',unit:'count',bp:1.09},
+{name:'Pinto Beans',cat:'Canned',unit:'count',bp:1.09},
+{name:'Diced Tomatoes',cat:'Canned',unit:'count',bp:1.19},
+{name:'Corn (canned)',cat:'Canned',unit:'count',bp:0.99},
+{name:'Tomato Sauce',cat:'Canned',unit:'count',bp:0.69},
+{name:'Tuna',cat:'Canned',unit:'count',bp:1.49},
+{name:'Toilet Paper',cat:'Household',unit:'count',bp:0.65},
+{name:'Paper Towels',cat:'Household',unit:'count',bp:0.89},
+{name:'Aluminum Foil',cat:'Household',unit:'count',bp:4.29},
+{name:'Plastic Wrap',cat:'Household',unit:'count',bp:3.49},
+{name:'Ziplock Bags (gallon)',cat:'Household',unit:'count',bp:4.99},
+{name:'Ziplock Bags (quart)',cat:'Household',unit:'count',bp:4.49},
+{name:'Trash Bags',cat:'Household',unit:'count',bp:8.49},
+{name:'Dish Soap',cat:'Household',unit:'count',bp:3.29},
+{name:'Laundry Detergent',cat:'Household',unit:'count',bp:10.99},
+{name:'Parchment Paper',cat:'Household',unit:'count',bp:4.29},
 ];
 
 function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)).toFixed(2):baseBP;}
@@ -400,7 +400,7 @@ function rModal(){
     <div class="modal-title">Add Custom Item</div>
     <input class="inp" id="m-n" placeholder="Item name" style="margin-bottom:10px">
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <select class="inp" id="m-u">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select>
+      <div class="lbl">Price per ___?</div><select class="inp" id="m-u">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select>
     </div>
     <div class="lbl">Buy price — stock up below this</div>
     <input class="inp" id="m-bp" type="number" step="0.01" placeholder="e.g. 1.99" inputmode="decimal" style="margin-bottom:14px">
@@ -415,7 +415,7 @@ function rModal(){
       ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${item.unit} at ${best.store}</div>`:''}
       <div class="lbl">What is the total price on the tag?</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU('${item.unit}')">
-      <div class="lbl" style="margin-top:12px">How many ${item.unit}s in the package?</div>
+      <div class="lbl" style="margin-top:12px">How many are you buying?</div>
       <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-pk" type="number" step="0.01" value="1" inputmode="decimal" oninput="calcU('${item.unit}')">
       <div id="uc" style="text-align:center;font-size:18px;font-weight:800;color:var(--green);margin:12px 0;min-height:28px"></div>
       <button class="btn btn-primary" onclick="addLog('${item.id}',document.getElementById('m-p').value,document.getElementById('m-pk').value);A.modal=null;">Log Price</button>
@@ -486,7 +486,7 @@ function rModal(){
   return'';
 }
 
-function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(u){if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}}
+function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(u){if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit+(k>1?' ('+k+' total)':'');else u.textContent='';}}
 
 load();render();
 
