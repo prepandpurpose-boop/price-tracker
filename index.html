@@ -412,7 +412,14 @@ function rModal(){
       ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${item.unit} at ${best.store}</div>`:''}
       <div class="lbl">What is the total price on the tag?</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU('${item.unit}')">
-      <div class="lbl" style="margin-top:12px">How many are you buying?</div>
+      <div class="lbl" style="margin-top:12px">${
+  item.unit==='lb'?'How many lbs?':
+  item.unit==='oz'?'How many oz?':
+  item.unit==='gallon'?'How many gallons?':
+  item.unit==='dozen'?'How many dozen?':
+  item.unit==='loaf'?'How many loaves?':
+  'How many?'
+}</div>
       <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-pk" type="number" step="0.01" value="1" inputmode="decimal" oninput="calcU('${item.unit}')">
       <div id="uc" style="text-align:center;font-size:18px;font-weight:800;color:var(--green);margin:12px 0;min-height:28px"></div>
       <button class="btn btn-primary" onclick="addLog('${item.id}',document.getElementById('m-p').value,document.getElementById('m-pk').value);A.modal=null;">Log Price</button>
@@ -474,7 +481,14 @@ function rModal(){
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${fmtD(l.date)}</div>
       <div class="lbl">Total price</div>
       <input class="inp" id="m-et" type="number" step="0.01" value="${(l.total||l.price).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
-      <div class="lbl">How many ${item.unit}s</div>
+      <div class="lbl">${
+  item.unit==='lb'?'How many lbs?':
+  item.unit==='oz'?'How many oz?':
+  item.unit==='gallon'?'How many gallons?':
+  item.unit==='dozen'?'How many dozen?':
+  item.unit==='loaf'?'How many loaves?':
+  'How many?'
+}</div>
       <input class="inp" id="m-ek" type="number" step="0.01" value="${l.pkg||1}" inputmode="decimal" style="margin-bottom:14px">
       <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek').value);A.modal=null;A._editLog=null;">Save Changes</button>
       <button style="display:block;width:100%;margin-top:8px;background:none;border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${e.itemId}','${l.id}');A.modal=null;A._editLog=null;">Delete This Entry</button>
@@ -483,7 +497,7 @@ function rModal(){
   return'';
 }
 
-function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(u){if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit+(k>1?' ('+k+' total)':'');else u.textContent='';}}
+function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(u){if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}}
 
 load();render();
 
