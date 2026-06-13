@@ -282,6 +282,7 @@ function render(){
   else if(A.page==='detail')h=rHdr('detail')+rDetail()+rNav();
   else if(A.page==='stores')h=rHdr('main')+rStoresView()+rNav();
   else if(A.page==='more')h=rHdr('main')+rMore()+rNav();
+  else if(A.page==='settings')h=rHdr('settings')+rSettings()+rNav();
   app.innerHTML=h;
   if(A.modal){const d=document.createElement('div');d.innerHTML=rModal();if(d.firstElementChild)app.appendChild(d.firstElementChild);}
 }
@@ -308,6 +309,7 @@ function rWelcome(){
 }
 
 function rHdr(mode){
+  if(mode==='settings')return`<div class="hdr"><button class="hdr-back" onclick="A.page='more';render()">← Back</button><div class="hdr-title" style="font-size:14px">Settings &amp; Data</div><div></div></div>`;
   if(mode==='shop')return`<div class="hdr"><div><div class="hdr-title">🏪 ${A.activeStore}</div><div class="hdr-sub">Tap an item to log its price</div></div><button class="hdr-btn" onclick="A.activeStore=null;A.page='store_select';A.search='';render()">Switch</button></div>`;
   if(mode==='detail')return`<div class="hdr"><button class="hdr-back" onclick="A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render()">← Back</button><div class="hdr-title" style="font-size:14px">${A.selectedItem?A.selectedItem.name:''}</div><div></div></div>`;
   return`<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><img src="${LOGO}" class="logo" alt=""><div><div class="hdr-title">Price Tracker</div><div class="hdr-sub">Prep & Purpose</div></div></div></div>`;
@@ -484,38 +486,92 @@ function rStoresView(){
 
 function rMore(){
   return`<div class="cnt" style="padding-top:16px">
-    <div style="font-size:18px;font-weight:800;margin-bottom:16px">More</div>
-    <div class="help-card">
-      <div style="font-size:15px;font-weight:800;margin-bottom:10px">How It Works</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
-        <strong>1. Add your stores</strong> — tap the 🛒 Shop tab at the bottom, then tap "Add New Store." Type the store name and you are ready to go.<br><br>
-        <strong>2. Pick a store</strong> when you arrive.<br><br>
-        <strong>3. Tap an item and enter the price.</strong> Two kinds of items:<br>
-        &nbsp;&nbsp;• <strong>By weight or unit</strong> (meat, produce, eggs, milk) — type the price per pound (or per dozen, per gallon) straight off the shelf tag. If you only know the total package price, type the total and how many pounds and the app does the math.<br>
-        &nbsp;&nbsp;• <strong>By the package</strong> (toilet paper, paper towels, trash bags, canned goods) — type the total package price. The pack count is just there to catch shrinkflation; it does not change the price.<br><br>
-        <strong>4. Deals.</strong> "2 for $5" or buy-one-get-one? Tap the deal buttons in the log screen and the app works out the real price for you.<br><br>
-        <strong>5. See the light:</strong><br>
-        🟢 <strong>Green</strong> = good deal, stock up<br>
-        🟡 <strong>Yellow</strong> = normal price, buy if you need it<br>
-        🔴 <strong>Red</strong> = too high, skip if you can<br><br>
-        <strong>6. Compare stores.</strong> The Stores tab shows every price you have logged and points you to the cheapest store.<br><br>
-        <strong>About sale prices:</strong> Log every price, including sales. The app learns the cycle and shows you when deals hit.<br><br>
-        <strong>About shrinkflation:</strong> For package items, enter the count each time. If the count shrinks but the price holds, the app flags it.<br><br>
-        <strong>Your buy price</strong> is the target. Green means at or below it. It starts from your state's average and you can change it anytime — tap an item, tap Edit Buy Price.<br><br>
-        <strong>Editing and deleting:</strong> Tap any item to see its history. Use ✏️ to edit or 🗑️ to delete any entry.
+    <div style="font-size:18px;font-weight:800;margin-bottom:16px">How It Works</div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 1 — Add your stores</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap the 🛒 Shop tab, then tap <strong>Add New Store</strong>. Type the name — Food Lion, Aldi, Costco, whatever you shop at. Add as many as you want.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 2 — Pick your store when you arrive</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">The app tracks which store each price came from so it can compare them for you later.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 3 — Tap an item and log the price</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        Two types of items, two simple flows:<br><br>
+        <strong>Meat, produce, eggs, milk</strong> — type the price per pound (or per dozen, per gallon) straight off the shelf sign. If your item has a sticker with a total price and weight, scroll down and enter both — the app does the math.<br><br>
+        <strong>Paper goods, canned goods, packaged items</strong> — type the total price on the tag. That's it. The count field is optional and only used to catch shrinkflation.
       </div>
     </div>
 
-    <div class="help-card" style="margin-top:12px">
-      <div style="font-size:15px;font-weight:800;margin-bottom:8px">💾 Back Up Your Data</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px">Your prices live on this device only. Phones can clear app data, so save a backup now and then. Restore it any time, or move it to a new phone.</div>
-      <button class="btn btn-primary btn-sm" style="width:100%;margin-bottom:8px" onclick="exportData()">Download Backup</button>
-      <button class="btn btn-outline btn-sm" style="width:100%" onclick="A.modal='importData';render()">Restore From Backup</button>
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 4 — Use the deal buttons when there's a sale</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        When you tap an item to log a price, four buttons appear at the top:<br><br>
+        <strong>Regular</strong> — standard shelf price, no deal<br>
+        <strong>Markdown</strong> — red sticker, clearance, or manager's special. Just type what the tag says.<br>
+        <strong>2 for $X</strong> — type the total deal price and how many are in it. App splits it out.<br>
+        <strong>Buy 1 Get 1</strong> — type the price of one item. App cuts it in half since you're getting two.
+      </div>
     </div>
 
-    <div class="help-card" style="margin-top:12px">
-      <div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 Add to Home Screen</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>iPhone:</strong> Tap share → Add to Home Screen<br><strong>Android:</strong> Tap menu → Add to Home Screen</div>
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 5 — Read the light</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        🟢 <strong>Green — Buy it.</strong> At or below your target. Stock up if you can.<br><br>
+        🟡 <strong>Yellow — OK price.</strong> Normal range. Buy what you need.<br><br>
+        🔴 <strong>Red — Too high.</strong> Skip it and wait for it to come back down.
+      </div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 6 — Compare stores</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap the 🏪 Stores tab to see everything you have logged and find out which store has the best price on each item. The app will flag it right on the shopping screen too.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Your buy price</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">This is the target — the price where you say yes without thinking about it. Green means at or below it. The app sets a starting target based on your state's average prices. Change it anytime: tap the item, tap <strong>Edit Buy Price</strong>.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Fixing a mistake</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap any item to see its full price history. Tap ✏️ to edit an entry or 🗑️ to delete it. On the result screen after logging, there is also a "Wrong price? Tap to delete" button right there.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">📱 Add to Home Screen</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>iPhone:</strong> Tap the share icon → Add to Home Screen<br><strong>Android:</strong> Tap the three-dot menu → Add to Home Screen</div>
+    </div>
+
+    <div style="text-align:center;padding:20px 0 8px">
+      <button onclick="A.page='settings';render()" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:8px 16px">⚙️ Settings &amp; Data</button>
+    </div>
+    <div style="text-align:center;padding-bottom:24px;font-size:11px;color:var(--text-hint)">Steward what you have. Serve where you are.</div>
+  </div>`;
+}
+
+function rSettings(){
+  return`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">Settings &amp; Data</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">App data and preferences</div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px">Your state</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Currently set to <strong>${A.userState||'not set'}</strong>. This adjusts starting buy price targets to your area.</div>
+      <select class="inp" id="st-state" onchange="A.userState=this.value;save();render();toast('State updated')">
+        ${STATE_LIST.map(s=>`<option value="${s}" ${A.userState===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px">Back up your data</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px">All your prices live on this device. If you clear your browser history or switch phones, your data is gone — unless you have a backup. Download one now and save it somewhere safe.</div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="exportData()">Download Backup File</button>
+      <button class="btn btn-outline" onclick="A.modal='importData';render()">Restore From Backup</button>
     </div>
 
     <div style="text-align:center;padding:24px 0;font-size:11px;color:var(--text-hint)">Steward what you have. Serve where you are.</div>
@@ -526,7 +582,7 @@ function rNav(){
   return`<div class="nav">
     <button class="nav-btn ${A.page==='store_select'||A.page==='shopping'?'active':''}" onclick="A.page=A.activeStore?'shopping':'store_select';A.search='';render()"><span class="nav-i">🛒</span>Shop</button>
     <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()"><span class="nav-i">🏪</span>Stores</button>
-    <button class="nav-btn ${A.page==='more'?'active':''}" onclick="A.page='more';render()"><span class="nav-i">ℹ️</span>More</button>
+    <button class="nav-btn ${A.page==='more'||A.page==='settings'?'active':''}" onclick="A.page='more';render()"><span class="nav-i">ℹ️</span>More</button>
   </div>`;
 }
 
@@ -573,15 +629,16 @@ function logBody(item){
   let body=`<div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${ul}</div>
     ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best seen:</strong> $${best.price.toFixed(2)}/${ul} at ${best.store}</div>`:''}
-    <div class="deal-tabs">
+    <div class="deal-tabs" style="font-size:11px">
       <div class="deal-tab ${dm==='plain'?'active':''}" onclick="setDeal('plain')">Regular</div>
+      <div class="deal-tab ${dm==='markdown'?'active':''}" onclick="setDeal('markdown')">Markdown</div>
       <div class="deal-tab ${dm==='twofor'?'active':''}" onclick="setDeal('twofor')">2 for $X</div>
-      <div class="deal-tab ${dm==='bogo'?'active':''}" onclick="setDeal('bogo')">BOGO free</div>
+      <div class="deal-tab ${dm==='bogo'?'active':''}" onclick="setDeal('bogo')">Buy 1 Get 1</div>
     </div>`;
 
   // ── PACKAGE MODE (toilet paper, canned goods, etc.) ──
   if(isPkg){
-    let priceLbl=dm==='twofor'?'Total deal price (both packages)':dm==='bogo'?'Price of ONE package':'Total package price on the tag';
+    let priceLbl=dm==='twofor'?'Total deal price (both packages)':dm==='bogo'?'Price of ONE package':dm==='markdown'?'Marked-down price on the tag':'Total package price on the tag';
     body+=`<div class="lbl">${priceLbl}</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU()">`;
     if(dm==='twofor'){
@@ -594,7 +651,7 @@ function logBody(item){
   // ── UNIT MODE (meat, produce, dairy by weight) ──
   }else{
     // PRIMARY: per-unit price straight off the shelf
-    let primaryLbl=dm==='twofor'?'Total deal price':dm==='bogo'?'Price of ONE':unitPriceLbl(item);
+    let primaryLbl=dm==='twofor'?'Total deal price':dm==='bogo'?'Price of ONE':dm==='markdown'?'Marked-down price per '+item.unit+' on the tag':unitPriceLbl(item);
     body+=`<div class="lbl">${primaryLbl}</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU()">`;
 
@@ -603,8 +660,8 @@ function logBody(item){
         <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
     }
 
-    // SECONDARY (plain mode only): optional total+weight override
-    if(dm==='plain'){
+    // SECONDARY (plain/markdown mode only): optional total+weight override
+    if(dm==='plain'||dm==='markdown'){
       body+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
         <div style="font-size:12px;font-weight:700;color:var(--text-hint);margin-bottom:10px">OR — have a stickered package? Enter total + weight instead:</div>
         <div style="display:flex;gap:8px">
@@ -672,7 +729,7 @@ function computePrice(){
     }
   }
 
-  // plain
+  // plain or markdown — markdown is just a regular price entry with a different label
   if(isPkg){
     const pkg=parseFloat(document.getElementById('m-pk')?.value)||1;
     return{eff:+raw.toFixed(2),total:+raw.toFixed(2),pkg};
