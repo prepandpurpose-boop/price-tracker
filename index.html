@@ -532,46 +532,94 @@ function rNav(){
 
 function setDeal(mode){A._dealMode=mode;const item=A.selectedItem;if(item){renderLogBody(item);}}
 
+// Unit label for the primary price field
+function unitPriceLbl(item){
+  switch(item.unit){
+    case'lb':return'Price per pound on the tag';
+    case'oz':return'Price per oz on the tag';
+    case'dozen':return'Price per dozen on the tag';
+    case'gallon':return'Price per gallon on the tag';
+    case'loaf':return'Price per loaf on the tag';
+    default:return'Price per '+item.unit+' on the tag';
+  }
+}
+function unitTotalLbl(item){
+  switch(item.unit){
+    case'lb':return'Total sticker price ($)';
+    case'oz':return'Total price ($)';
+    case'dozen':return'Total price ($)';
+    case'gallon':return'Total price ($)';
+    default:return'Total price ($)';
+  }
+}
+function unitQtyLbl(item){
+  switch(item.unit){
+    case'lb':return'How many pounds?';
+    case'oz':return'How many oz?';
+    case'dozen':return'How many dozen?';
+    case'gallon':return'How many gallons?';
+    case'loaf':return'How many loaves?';
+    default:return'How many?';
+  }
+}
+
 function logBody(item){
   const best=getBest(item.id);
   const dm=A._dealMode||'plain';
   const ul=priceLabel(item);
   const isPkg=item.mode==='package';
-  // Price prompt depends on mode + deal
-  let priceLbl,pricePh;
-  if(dm==='twofor'){priceLbl='Deal price — e.g. 2 for this total';pricePh='$0.00';}
-  else if(dm==='bogo'){priceLbl=isPkg?'Price of ONE package (before free one)':'Price of ONE (before free one)';pricePh='$0.00';}
-  else{priceLbl=isPkg?'Total package price on the tag':(item.unit==='lb'?'Price per pound on the tag':item.unit==='oz'?'Price per oz on the tag':item.unit==='dozen'?'Price per dozen on the tag':item.unit==='gallon'?'Price per gallon on the tag':item.unit==='loaf'?'Price per loaf on the tag':'Price per '+item.unit+' on the tag');pricePh='$0.00';}
 
+  // ── HEADER + BEST PRICE ──
   let body=`<div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${ul}</div>
-    ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${ul} at ${best.store}</div>`:''}
+    ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best seen:</strong> $${best.price.toFixed(2)}/${ul} at ${best.store}</div>`:''}
     <div class="deal-tabs">
       <div class="deal-tab ${dm==='plain'?'active':''}" onclick="setDeal('plain')">Regular</div>
       <div class="deal-tab ${dm==='twofor'?'active':''}" onclick="setDeal('twofor')">2 for $X</div>
       <div class="deal-tab ${dm==='bogo'?'active':''}" onclick="setDeal('bogo')">BOGO free</div>
-    </div>
-    <div class="lbl">${priceLbl}</div>
-    <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="${pricePh}" inputmode="decimal" autofocus oninput="calcU()">`;
+    </div>`;
 
-  // "how many in the deal" for 2-for: default 2
-  if(dm==='twofor'){
-    body+=`<div class="lbl" style="margin-top:12px">How many in the deal?</div>
-      <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
-  }
-
-  // quantity / count
+  // ── PACKAGE MODE (toilet paper, canned goods, etc.) ──
   if(isPkg){
-    body+=`<div class="lbl" style="margin-top:12px">${qtyLabel(item)}</div>
-      <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-pk" type="number" step="1" value="${item.defaultQty||1}" inputmode="numeric" oninput="calcU()">
-      <div style="font-size:11px;color:var(--text-hint);margin-top:4px;text-align:center">Count only catches shrinkflation — it does not change the price.</div>`;
+    let priceLbl=dm==='twofor'?'Total deal price (both packages)':dm==='bogo'?'Price of ONE package':'Total package price on the tag';
+    body+=`<div class="lbl">${priceLbl}</div>
+      <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU()">`;
+    if(dm==='twofor'){
+      body+=`<div class="lbl" style="margin-top:12px">How many in the deal?</div>
+        <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
+    }
+    body+=`<div class="lbl" style="margin-top:12px">How many in the package? <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — tracks shrinkflation)</span></div>
+      <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-pk" type="number" step="1" value="${item.defaultQty||1}" inputmode="numeric" oninput="calcU()">`;
+
+  // ── UNIT MODE (meat, produce, dairy by weight) ──
   }else{
-    // unit mode: only show a qty field when entering a total (regular mode keeps it simple: per-unit direct, qty hidden unless they want total math)
-    body+=`<div style="margin-top:12px"><label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="m-usetotal" onchange="toggleTotal('${item.unit}')" ${dm!=='plain'?'checked disabled':''}> I have a total price for multiple ${item.unit==='lb'?'pounds':item.unit+'s'}</label></div>
-      <div id="qtywrap" style="${dm!=='plain'?'':'display:none'};margin-top:10px">
-        <div class="lbl">${qtyLabel(item)}</div>
-        <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-pk" type="number" step="0.01" value="${item.defaultQty||1}" inputmode="decimal" oninput="calcU()">
+    // PRIMARY: per-unit price straight off the shelf
+    let primaryLbl=dm==='twofor'?'Total deal price':dm==='bogo'?'Price of ONE':unitPriceLbl(item);
+    body+=`<div class="lbl">${primaryLbl}</div>
+      <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU()">`;
+
+    if(dm==='twofor'){
+      body+=`<div class="lbl" style="margin-top:12px">How many in the deal?</div>
+        <input class="inp" style="font-size:18px;font-weight:700;text-align:center;padding:10px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
+    }
+
+    // SECONDARY (plain mode only): optional total+weight override
+    if(dm==='plain'){
+      body+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text-hint);margin-bottom:10px">OR — have a stickered package? Enter total + weight instead:</div>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <div class="lbl">${unitTotalLbl(item)}</div>
+            <input class="inp" style="text-align:center" id="m-tot" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" oninput="calcUFromTotal()">
+          </div>
+          <div style="flex:1">
+            <div class="lbl">${unitQtyLbl(item)}</div>
+            <input class="inp" style="text-align:center" id="m-pk" type="number" step="0.01" placeholder="0" inputmode="decimal" oninput="calcUFromTotal()">
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-hint);margin-top:6px">Fill these two and the per-${item.unit} price above updates automatically.</div>
       </div>`;
+    }
   }
 
   body+=`<div id="uc" style="text-align:center;font-size:18px;font-weight:800;color:var(--green);margin:12px 0;min-height:28px"></div>
@@ -584,52 +632,60 @@ function renderLogBody(item){
   if(c){c.innerHTML=logBody(item);setTimeout(()=>{const p=document.getElementById('m-p');if(p)p.focus();},0);}
 }
 
-function toggleTotal(unit){
-  const cb=document.getElementById('m-usetotal'),w=document.getElementById('qtywrap');
-  if(w)w.style.display=cb&&cb.checked?'block':'none';
+// Called when total+weight secondary fields change — fills the per-unit primary field
+function calcUFromTotal(){
+  const tot=parseFloat(document.getElementById('m-tot')?.value)||0;
+  const qty=parseFloat(document.getElementById('m-pk')?.value)||0;
+  const pp=document.getElementById('m-p');
+  if(tot>0&&qty>0&&pp){
+    pp.value=(tot/qty).toFixed(2);
+  }
   calcU();
 }
 
-// Compute effective per-unit (or per-package) price from current inputs
+// Compute effective stored price + context from current inputs
 function computePrice(){
   const item=A.selectedItem;if(!item)return{eff:0,total:0,pkg:1};
   const dm=A._dealMode||'plain';
   const raw=parseFloat(document.getElementById('m-p')?.value)||0;
   const isPkg=item.mode==='package';
-  let total,pkg;
+
   if(dm==='twofor'){
-    const dn=parseFloat(document.getElementById('m-dealn')?.value)||2;
+    const dn=Math.max(2,parseFloat(document.getElementById('m-dealn')?.value)||2);
     if(isPkg){
-      // raw = total for dn packages -> per package = raw/dn; count field is shrink context for ONE package
       const cnt=parseFloat(document.getElementById('m-pk')?.value)||1;
-      total=raw/dn;pkg=cnt;return{eff:+total.toFixed(2),total:+total.toFixed(2),pkg};
+      const perPkg=+(raw/dn).toFixed(2);
+      return{eff:perPkg,total:perPkg,pkg:cnt};
     }else{
-      // unit mode: raw is total for dn units of the base unit? Treat as total price for dn units.
-      total=raw;pkg=dn;return{eff:+(raw/dn).toFixed(2),total:raw,pkg:dn};
+      // raw is total deal price for dn units
+      return{eff:+(raw/dn).toFixed(2),total:raw,pkg:dn};
     }
   }
+
   if(dm==='bogo'){
     if(isPkg){
       const cnt=parseFloat(document.getElementById('m-pk')?.value)||1;
-      // buy one get one free: pay raw for two packages -> per package = raw/2
-      total=raw/2;pkg=cnt;return{eff:+total.toFixed(2),total:+total.toFixed(2),pkg};
+      const perPkg=+(raw/2).toFixed(2);
+      return{eff:perPkg,total:perPkg,pkg:cnt};
     }else{
-      // price of one unit, get one free -> effective per unit = raw/2
       return{eff:+(raw/2).toFixed(2),total:raw,pkg:2};
     }
   }
+
   // plain
   if(isPkg){
-    pkg=parseFloat(document.getElementById('m-pk')?.value)||1;
+    const pkg=parseFloat(document.getElementById('m-pk')?.value)||1;
     return{eff:+raw.toFixed(2),total:+raw.toFixed(2),pkg};
   }
-  // unit mode plain: either direct per-unit, or total+qty if checkbox on
-  const useTotal=document.getElementById('m-usetotal')?.checked;
-  if(useTotal){
-    pkg=parseFloat(document.getElementById('m-pk')?.value)||1;
-    return{eff:+(raw/pkg).toFixed(2),total:raw,pkg};
-  }
-  return{eff:+raw.toFixed(2),total:raw,pkg:1};
+
+  // unit mode plain: raw IS the per-unit price (primary field)
+  // secondary total+qty fields already updated raw via calcUFromTotal
+  // pkg stored as weight if they filled the secondary, else 1
+  const qty=parseFloat(document.getElementById('m-pk')?.value)||0;
+  const tot=parseFloat(document.getElementById('m-tot')?.value)||0;
+  const pkg=qty>0?qty:1;
+  const total=tot>0?tot:raw; // if secondary filled, store actual total; else store per-unit
+  return{eff:+raw.toFixed(2),total:+total.toFixed(2),pkg};
 }
 
 function calcU(){
@@ -640,14 +696,13 @@ function calcU(){
   if(eff>0){
     const bp=parseFloat(item.buy_price),s=sig(eff,bp);
     const light=s==='buy'?'🟢':s==='high'?'🔴':'🟡';
-    u.innerHTML=light+' = $'+eff.toFixed(2)+' per '+ul;
+    u.innerHTML=light+' $'+eff.toFixed(2)+' per '+ul;
   }else u.textContent='';
 }
 
 function submitLog(itemId){
-  const {total,pkg}=computePrice();
-  if(!total||total<=0)return toast('Enter the price');
-  // save default qty for package items so it prefills next time
+  const {eff,total,pkg}=computePrice();
+  if(!eff||eff<=0)return toast('Enter the price');
   const item=A.items.find(i=>i.id===itemId);
   if(item&&item.mode==='package'&&pkg>0)updateDefaultQty(itemId,pkg);
   addLog(itemId,total,pkg);
