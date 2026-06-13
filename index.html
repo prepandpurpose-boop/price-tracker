@@ -84,50 +84,65 @@ const STATE_LIST=Object.keys(STATES).sort();
 const A={page:'welcome',activeStore:null,items:[],logs:{},stores:[],search:'',selectedItem:null,expandedStore:null,modal:null,_logResult:null,userState:null,_dealMode:'plain'};
 const UNITS=['lb','oz','gallon','dozen','count','loaf','package'];
 
-// priceMode: 'unit' = enter price-per-unit directly (meat, produce, eggs, dairy by weight)
-//            'package' = enter total package price; count is context only, does NOT divide
+// mode:'unit' = price per lb off the shelf sign. mode:'package' = total price on the package.
 const STARTERS=[
-{name:'Pork Butt',cat:'Protein',unit:'lb',mode:'unit',bp:3.29},
-{name:'Chicken Thighs (bone-in)',cat:'Protein',unit:'lb',mode:'unit',bp:2.79},
-{name:'Chicken Breasts',cat:'Protein',unit:'lb',mode:'unit',bp:4.29},
-{name:'Ground Beef',cat:'Protein',unit:'lb',mode:'unit',bp:6.49},
-{name:'Ground Turkey',cat:'Protein',unit:'lb',mode:'unit',bp:4.49},
-{name:'Whole Chicken',cat:'Protein',unit:'lb',mode:'unit',bp:1.99},
-{name:'Bacon',cat:'Protein',unit:'lb',mode:'unit',bp:7.49},
-{name:'Breakfast Sausage',cat:'Protein',unit:'lb',mode:'unit',bp:4.49},
-{name:'Salmon (frozen)',cat:'Protein',unit:'lb',mode:'unit',bp:8.99},
-{name:'Turkey (whole)',cat:'Protein',unit:'lb',mode:'unit',bp:1.49},
-{name:'Ham',cat:'Protein',unit:'lb',mode:'unit',bp:2.49},
-{name:'Eggs',cat:'Dairy',unit:'dozen',mode:'unit',bp:3.79},
-{name:'Sweet Potatoes',cat:'Produce',unit:'lb',mode:'unit',bp:1.29},
-{name:'Potatoes',cat:'Produce',unit:'lb',mode:'unit',bp:0.89},
-{name:'Onions',cat:'Produce',unit:'lb',mode:'unit',bp:1.09},
-{name:'Carrots',cat:'Produce',unit:'lb',mode:'unit',bp:1.19},
-{name:'Bananas',cat:'Produce',unit:'lb',mode:'unit',bp:0.69},
-{name:'Butter',cat:'Dairy',unit:'lb',mode:'unit',bp:4.99},
-{name:'Milk',cat:'Dairy',unit:'gallon',mode:'unit',bp:4.09},
-{name:'Cheese (block)',cat:'Dairy',unit:'lb',mode:'unit',bp:5.49},
-{name:'Flour',cat:'Pantry',unit:'lb',mode:'unit',bp:0.59},
-{name:'Sugar',cat:'Pantry',unit:'lb',mode:'unit',bp:0.69},
-{name:'Rice',cat:'Pantry',unit:'lb',mode:'unit',bp:0.79},
-{name:'Oats',cat:'Pantry',unit:'lb',mode:'unit',bp:0.29},
-{name:'Pasta',cat:'Pantry',unit:'package',mode:'package',bp:1.49},
-{name:'Black Beans',cat:'Canned',unit:'package',mode:'package',bp:1.09},
-{name:'Pinto Beans',cat:'Canned',unit:'package',mode:'package',bp:1.09},
-{name:'Diced Tomatoes',cat:'Canned',unit:'package',mode:'package',bp:1.19},
-{name:'Corn (canned)',cat:'Canned',unit:'package',mode:'package',bp:0.99},
-{name:'Tomato Sauce',cat:'Canned',unit:'package',mode:'package',bp:0.69},
-{name:'Tuna',cat:'Canned',unit:'package',mode:'package',bp:1.49},
-{name:'Toilet Paper',cat:'Household',unit:'package',mode:'package',bp:7.99},
-{name:'Paper Towels',cat:'Household',unit:'package',mode:'package',bp:9.99},
-{name:'Aluminum Foil',cat:'Household',unit:'package',mode:'package',bp:4.29},
-{name:'Plastic Wrap',cat:'Household',unit:'package',mode:'package',bp:3.49},
-{name:'Ziplock Bags (gallon)',cat:'Household',unit:'package',mode:'package',bp:4.99},
-{name:'Ziplock Bags (quart)',cat:'Household',unit:'package',mode:'package',bp:4.49},
-{name:'Trash Bags',cat:'Household',unit:'package',mode:'package',bp:8.49},
-{name:'Dish Soap',cat:'Household',unit:'package',mode:'package',bp:3.29},
-{name:'Laundry Detergent',cat:'Household',unit:'package',mode:'package',bp:10.99},
-{name:'Parchment Paper',cat:'Household',unit:'package',mode:'package',bp:4.29},
+// ── Protein — all priced per lb at the meat counter ──
+{name:'Pork Butt',unit:'lb',mode:'unit',bp:3.29},
+{name:'Chicken Thighs (bone-in)',unit:'lb',mode:'unit',bp:2.79},
+{name:'Chicken Breasts',unit:'lb',mode:'unit',bp:4.29},
+{name:'Ground Beef',unit:'lb',mode:'unit',bp:6.49},
+{name:'Ground Turkey',unit:'lb',mode:'unit',bp:4.49},
+{name:'Whole Chicken',unit:'lb',mode:'unit',bp:1.99},
+{name:'Bacon',unit:'package',mode:'package',bp:6.99},
+{name:'Breakfast Sausage',unit:'package',mode:'package',bp:4.99},
+{name:'Salmon (frozen)',unit:'package',mode:'package',bp:9.99},
+{name:'Turkey (whole)',unit:'lb',mode:'unit',bp:1.49},
+{name:'Ham',unit:'package',mode:'package',bp:7.99},
+{name:'Canned Chicken',unit:'package',mode:'package',bp:2.49},
+// ── Produce — bags have total prices ──
+{name:'Bananas',unit:'lb',mode:'unit',bp:0.69},
+{name:'Potatoes (5 lb bag)',unit:'package',mode:'package',bp:4.49},
+{name:'Sweet Potatoes (3 lb bag)',unit:'package',mode:'package',bp:3.99},
+{name:'Onions (3 lb bag)',unit:'package',mode:'package',bp:3.29},
+{name:'Carrots (1 lb bag)',unit:'package',mode:'package',bp:1.29},
+// ── Dairy — all sold as packages with a total price ──
+{name:'Eggs',unit:'package',mode:'package',bp:3.79},
+{name:'Milk (gallon)',unit:'package',mode:'package',bp:4.09},
+{name:'Butter (1 lb)',unit:'package',mode:'package',bp:4.99},
+{name:'Cheese Block (8 oz)',unit:'package',mode:'package',bp:3.49},
+{name:'Shredded Cheese (8 oz)',unit:'package',mode:'package',bp:3.49},
+{name:'Cream Cheese (8 oz)',unit:'package',mode:'package',bp:2.99},
+{name:'Yogurt (32 oz)',unit:'package',mode:'package',bp:4.99},
+{name:'Sour Cream (16 oz)',unit:'package',mode:'package',bp:2.49},
+{name:'Orange Juice (52 oz)',unit:'package',mode:'package',bp:4.49},
+// ── Pantry — all sold by the bag or box ──
+{name:'Bread',unit:'package',mode:'package',bp:3.49},
+{name:'Flour (5 lb)',unit:'package',mode:'package',bp:2.99},
+{name:'Sugar (4 lb)',unit:'package',mode:'package',bp:3.49},
+{name:'Rice (2 lb)',unit:'package',mode:'package',bp:2.49},
+{name:'Oats (42 oz)',unit:'package',mode:'package',bp:3.99},
+{name:'Pasta',unit:'package',mode:'package',bp:1.49},
+{name:'Peanut Butter',unit:'package',mode:'package',bp:3.99},
+{name:'Cooking Oil',unit:'package',mode:'package',bp:5.99},
+{name:'Chicken Broth',unit:'package',mode:'package',bp:2.49},
+// ── Canned ──
+{name:'Black Beans',unit:'package',mode:'package',bp:1.09},
+{name:'Pinto Beans',unit:'package',mode:'package',bp:1.09},
+{name:'Diced Tomatoes',unit:'package',mode:'package',bp:1.19},
+{name:'Corn (canned)',unit:'package',mode:'package',bp:0.99},
+{name:'Tomato Sauce',unit:'package',mode:'package',bp:0.69},
+{name:'Tuna',unit:'package',mode:'package',bp:1.49},
+// ── Household ──
+{name:'Toilet Paper',unit:'package',mode:'package',bp:7.99},
+{name:'Paper Towels',unit:'package',mode:'package',bp:9.99},
+{name:'Aluminum Foil',unit:'package',mode:'package',bp:4.29},
+{name:'Plastic Wrap',unit:'package',mode:'package',bp:3.49},
+{name:'Ziplock Bags (gallon)',unit:'package',mode:'package',bp:4.99},
+{name:'Ziplock Bags (quart)',unit:'package',mode:'package',bp:4.49},
+{name:'Trash Bags',unit:'package',mode:'package',bp:8.49},
+{name:'Dish Soap',unit:'package',mode:'package',bp:3.29},
+{name:'Laundry Detergent',unit:'package',mode:'package',bp:10.99},
+{name:'Parchment Paper',unit:'package',mode:'package',bp:4.29},
 ];
 
 function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)).toFixed(2):baseBP;}
@@ -161,12 +176,19 @@ function migrateItem(it){
     const st=STARTERS.find(s=>s.name.toLowerCase()===(it.name||'').toLowerCase());
     if(st){
       it.mode=st.mode;
-      if(it.unit==='count')it.unit='package';
-      if(st.mode==='package')it.buy_price=adjustedBP(st.bp);
+      it.unit=st.unit;
+      // always reset buy price to current starter target when mode changes
+      it.buy_price=adjustedBP(st.bp);
     }
-    else if(it.unit==='count'){it.mode='package';it.unit='package';it.buy_price=+(parseFloat(it.buy_price||1)*6).toFixed(2);}
+    else if(it.unit==='count'||it.unit==='oz'||it.unit==='dozen'||it.unit==='gallon'||it.unit==='loaf'){
+      // old non-lb unit items were always package-style
+      it.mode='package';it.unit='package';
+      if(parseFloat(it.buy_price)<2)it.buy_price=+(parseFloat(it.buy_price||1)*6).toFixed(2);
+    }
     else it.mode='unit';
   }
+  // fix any surviving oz/dozen/gallon/loaf unit-mode items to show correctly
+  if(it.mode==='unit'&&it.unit!=='lb'){it.mode='package';it.unit='package';}
   return it;
 }
 
@@ -357,19 +379,15 @@ function buildItemList(){
   const unadded=STARTERS.filter(s=>!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase())&&(!q||s.name.toLowerCase().includes(q)));
   if(unadded.length>0){
     h+=`<div class="sec-label" style="margin-top:14px">Suggested — Tap to Add</div>`;
-    const cats=[...new Set(unadded.map(s=>s.cat))];
-    cats.forEach(cat=>{
-      h+=`<div style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-left:4px">${cat}</div>`;
-      unadded.filter(s=>s.cat===cat).forEach(s=>{
-        const abp=adjustedBP(s.bp);
-        const lbl=s.mode==='package'?'/package':'/'+s.unit;
-        h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="const it=addItem('${esc(s.name)}','${s.unit}',${abp},'${s.mode}');A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render()">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:14px;font-weight:600">${s.name}</div>
-            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}${lbl}</div><div style="font-size:9px;color:var(--text-hint)">buy target</div></div>
-          </div>
-        </div>`;
-      });
+    unadded.forEach(s=>{
+      const abp=adjustedBP(s.bp);
+      const lbl=s.mode==='package'?'/pkg':'/lb';
+      h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="const it=addItem('${esc(s.name)}','${s.unit}',${abp},'${s.mode}');A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render()">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:600">${s.name}</div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}${lbl}</div><div style="font-size:9px;color:var(--text-hint)">buy target</div></div>
+        </div>
+      </div>`;
     });
   }
   if(!tracked.length&&!unadded.length&&q)h+=`<div class="empty"><div style="font-size:14px">No results for "${A.search}"</div></div>`;
@@ -404,7 +422,7 @@ function rDetail(){
   const bp=parseFloat(item.buy_price),logs=(A.logs[item.id]||[]).sort((a,b)=>new Date(b.date)-new Date(a.date)),best=getBest(item.id);
   const ul=priceLabel(item);
   let h=`<div class="cnt" style="padding-top:16px">
-    <div style="font-size:12px;color:var(--text-muted)">${item.category} · per ${ul}</div>
+    <div style="font-size:12px;color:var(--text-muted)">per ${ul}</div>
     <div style="font-size:14px;font-weight:700;color:var(--green);margin:4px 0">Buy under $${bp.toFixed(2)}/${ul}</div>
     ${best?`<div style="font-size:13px;color:var(--green-bright);font-weight:600">Best: $${best.price.toFixed(2)} at ${best.store} (${fmtD(best.date)})</div>`:''}
     <div style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap">
@@ -586,11 +604,19 @@ function rNav(){
 
 function setDeal(mode){A._dealMode=mode;const item=A.selectedItem;if(item){renderLogBody(item);}}
 
+// What to call the price unit in labels
+function priceLabel(item){
+  if(item.mode==='package')return'package';
+  if(item.unit==='lb')return'lb';
+  return'package'; // anything else (old oz, gallon, dozen) is effectively a package price
+}
+
 function priceLblFor(item,dm){
-  if(dm==='twofor')return item.mode==='package'?'Total deal price (e.g. 2 for $10)':'Total deal price (e.g. 2 for $6)';
-  if(dm==='bogo')return item.mode==='package'?'Price of ONE package':'Price of ONE item';
-  if(dm==='markdown')return item.mode==='package'?'Marked-down package price':'Marked-down price per '+item.unit;
-  return item.mode==='package'?'Total price on the tag':'Price per '+item.unit+' on the tag';
+  const isPerLb=item.mode==='unit'&&item.unit==='lb';
+  if(dm==='twofor')return isPerLb?'Total deal price (e.g. 2 for $6)':'Total deal price (e.g. 2 for $10)';
+  if(dm==='bogo')return isPerLb?'Price per lb of ONE item':'Price of ONE package';
+  if(dm==='markdown')return isPerLb?'Marked-down price per lb':'Marked-down package price';
+  return isPerLb?'Price per lb on the tag':'Total price on the tag';
 }
 
 function logBody(item){
@@ -628,7 +654,8 @@ function logBody(item){
   }
 
   body+=`<div id="uc" style="text-align:center;font-size:20px;font-weight:800;color:var(--green);margin:14px 0;min-height:32px"></div>
-    <button class="btn btn-primary" onclick="submitLog('${item.id}')">Log Price</button>`;
+    <button class="btn btn-primary" onclick="submitLog('${item.id}')">Log Price</button>
+    <button onclick="if(confirm('Remove ${esc(item.name)} from your list?')){deleteItem('${item.id}');A.modal=null;}" style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:8px;text-decoration:underline">Remove from my list</button>`;
   return body;
 }
 
