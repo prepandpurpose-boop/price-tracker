@@ -9,7 +9,7 @@
 <title>Price Tracker — Prep & Purpose</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+:root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--orange:#c45e00;--orange-light:#fff3e8;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 input,select,button{font-family:inherit}
@@ -312,7 +312,7 @@ function rWelcome(){
       <select class="inp" id="w-state" style="margin-bottom:20px"><option value="">Select your state</option>${opts}</select>
       <button class="btn btn-primary" onclick="const s=document.getElementById('w-state').value;if(!s)return toast('Pick your state');A.userState=s;A.page='store_select';save();render()">Get Started</button>
     </div>
-    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free — no account needed. Data saves on this device.<br>📱 Add to your home screen for quick access.</div>
+    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free — no account needed. Data saves on this device.<br>🔖 Bookmark this page for quick access.</div>
   </div>`;
 }
 
@@ -550,8 +550,8 @@ function rMore(){
     </div>
 
     <div class="help-card" style="margin-bottom:10px">
-      <div style="font-size:14px;font-weight:800;margin-bottom:10px">📱 Add to Home Screen</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.6"><strong>iPhone:</strong> Tap the share icon → Add to Home Screen<br><strong>Android:</strong> Tap the three-dot menu → Add to Home Screen<br><br><strong style="color:var(--yellow)">⚠️ Important:</strong> If you have been using this app in your browser first, your data does not carry over automatically. Go to <strong>Settings &amp; Data</strong> below, back up your data, then restore it after adding to home screen.</div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">🔖 Bookmark This App</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.6">Bookmark this page in your browser for quick access. You will always get the latest version automatically — no updates to install, no app store needed.<br><br><strong>iPhone Safari:</strong> Tap the share icon → Add Bookmark<br><strong>Android Chrome:</strong> Tap the three-dot menu → Bookmarks → Add Bookmark</div>
     </div>
 
     <div style="text-align:center;padding:20px 0 8px">
@@ -576,14 +576,8 @@ function rSettings(){
 
     <div class="help-card" style="margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;margin-bottom:8px">Back up your data</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:6px">Your prices live on this device only. Two things can wipe them out:</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">
-        &bull; Clearing your browser history<br>
-        &bull; Saving this app to your home screen — your data does <strong>not</strong> transfer automatically. Export first, then restore after adding to home screen.
-      </div>
-      <div style="background:var(--yellow-light);border:1px solid rgba(184,134,11,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--yellow);font-weight:600;margin-bottom:12px">
-        ⚠️ Back up before you add this to your home screen or clear Safari history.
-      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:6px">Your prices live on this device only. They can be wiped if you clear your browser history or switch to a new phone.</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">Back up regularly and save the text somewhere safe — Notes, email, or iCloud.</div>
       <button class="btn btn-primary" style="margin-bottom:8px" onclick="exportData()">Back Up My Data</button>
       <button class="btn btn-outline" onclick="A.modal='importData';render()">Restore From Backup</button>
     </div>
@@ -642,8 +636,7 @@ function logBody(item){
 
   body+=`<div id="uc" style="text-align:center;font-size:20px;font-weight:800;color:var(--green);margin:14px 0;min-height:32px"></div>
     <button class="btn btn-primary" onclick="submitLog('${item.id}')">Log Price</button>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-      <button onclick="A._shrinkItem='${item.id}';A.modal='trackShrink';render()" style="background:none;border:none;font-size:13px;font-weight:700;color:var(--green-mid);cursor:pointer;padding:4px 0;text-decoration:underline">📦 Track package size</button>
+    <div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
       <button onclick="if(confirm('Remove ${esc(item.name)} from your list?')){deleteItem('${item.id}');A.modal=null;}" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:4px 0;text-decoration:underline">Remove from list</button>
     </div>`;
   return body;
@@ -732,6 +725,7 @@ function rModal(){
       ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${ul}</div>`:''}
       ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> This used to be ${prev.pkgQty}${prev.pkgUnit}. Now it is ${r.log.pkgQty}${r.log.pkgUnit}. Same price, less product.</div>`:''}
       <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
+      <button onclick="A._shrinkItem='${r.itemId}';A.modal='trackShrink';render()" style="display:block;width:100%;margin-top:10px;background:var(--orange-light);border:2px solid var(--orange);border-radius:10px;color:var(--orange);font-size:14px;font-weight:800;cursor:pointer;padding:12px;text-align:center">📦 Track Package Size — Catch Shrinkflation</button>
       <button style="display:block;width:100%;margin-top:8px;background:var(--red-light);border:1px solid rgba(204,68,68,.2);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${r.itemId}','${r.log.id}');A.modal=null;A._logResult=null;render()">Wrong price? Tap to delete</button>
     </div></div>`;
   }
@@ -781,7 +775,7 @@ function rModal(){
         <div class="deal-tab" id="sk-ct" onclick="setShrinkUnit('ct')">count</div>
       </div>
       <button class="btn btn-primary" onclick="saveShrink('${item.id}')">Save Package Size</button>
-      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal='logPrice';render()">← Back to price</button>
+      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal=A._logResult?'result':'logPrice';render()">← Back</button>
     </div></div>`;
   }
 
@@ -818,10 +812,12 @@ function saveShrink(itemId){
   if(!qty||parseFloat(qty)<=0)return toast('Enter the package size');
   const logs=A.logs[itemId]||[];
   if(!logs.length)return toast('Log a price first');
-  // attach to the most recent log entry
   logs[0].pkgQty=+parseFloat(qty).toFixed(2);
   logs[0].pkgUnit=_shrinkUnit;
-  save();A.modal='logPrice';render();toast('Package size saved');
+  save();
+  // go back to result screen if we came from there, otherwise close
+  A.modal=A._logResult?'result':'logPrice';
+  render();toast('Package size saved');
 }
 let _customMode='unit';
 function setCustomMode(m){
