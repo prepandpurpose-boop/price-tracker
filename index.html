@@ -249,21 +249,11 @@ function qtyLabel(item){
 }
 let _t;function toast(m){let e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2d5016;color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;max-width:320px;text-align:center';document.body.appendChild(e);}e.textContent=m;e.style.opacity='1';clearTimeout(_t);_t=setTimeout(()=>e.style.opacity='0',2500);}
 
-// Export / backup
+// Export — show backup text in a modal so user can copy it anywhere (Notes, email, etc.)
+// No file download needed — works on every device including iOS home screen apps.
 function exportData(){
-  const payload=JSON.stringify({v:2,exported:new Date().toISOString(),items:A.items,logs:A.logs,stores:A.stores,userState:A.userState},null,0);
-  try{
-    const blob=new Blob([payload],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download='price-tracker-backup-'+new Date().toISOString().split('T')[0]+'.json';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-    toast('Backup downloaded');
-  }catch(e){
-    // fallback: copy to clipboard
-    if(navigator.clipboard){navigator.clipboard.writeText(payload).then(()=>toast('Backup copied to clipboard')).catch(()=>toast('Could not export'));}
-    else toast('Could not export');
-  }
+  A._exportText=JSON.stringify({v:2,exported:new Date().toISOString(),items:A.items,logs:A.logs,stores:A.stores,userState:A.userState},null,0);
+  A.modal='exportData';render();
 }
 function importData(text){
   try{
@@ -561,7 +551,7 @@ function rMore(){
 
     <div class="help-card" style="margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;margin-bottom:10px">📱 Add to Home Screen</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>iPhone:</strong> Tap the share icon → Add to Home Screen<br><strong>Android:</strong> Tap the three-dot menu → Add to Home Screen</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.6"><strong>iPhone:</strong> Tap the share icon → Add to Home Screen<br><strong>Android:</strong> Tap the three-dot menu → Add to Home Screen<br><br><strong style="color:var(--yellow)">⚠️ Important:</strong> If you have been using this app in your browser first, your data does not carry over automatically. Go to <strong>Settings &amp; Data</strong> below, back up your data, then restore it after adding to home screen.</div>
     </div>
 
     <div style="text-align:center;padding:20px 0 8px">
@@ -586,8 +576,15 @@ function rSettings(){
 
     <div class="help-card" style="margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;margin-bottom:8px">Back up your data</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px">All your prices live on this device. If you clear your browser history or switch phones, your data is gone — unless you have a backup. Download one now and save it somewhere safe.</div>
-      <button class="btn btn-primary" style="margin-bottom:8px" onclick="exportData()">Download Backup File</button>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:6px">Your prices live on this device only. Two things can wipe them out:</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">
+        &bull; Clearing your browser history<br>
+        &bull; Saving this app to your home screen — your data does <strong>not</strong> transfer automatically. Export first, then restore after adding to home screen.
+      </div>
+      <div style="background:var(--yellow-light);border:1px solid rgba(184,134,11,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--yellow);font-weight:600;margin-bottom:12px">
+        ⚠️ Back up before you add this to your home screen or clear Safari history.
+      </div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="exportData()">Back Up My Data</button>
       <button class="btn btn-outline" onclick="A.modal='importData';render()">Restore From Backup</button>
     </div>
 
@@ -785,6 +782,17 @@ function rModal(){
       </div>
       <button class="btn btn-primary" onclick="saveShrink('${item.id}')">Save Package Size</button>
       <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal='logPrice';render()">← Back to price</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='exportData'){
+    const txt=A._exportText||'';
+    return`<div class="modal-overlay" onclick="A.modal=null;A._exportText=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Back Up Your Data</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Press and hold in the box below, tap <strong>Select All</strong>, then tap <strong>Copy</strong>. Paste it into Notes, iCloud, email — anywhere you want to keep it safe.</div>
+      <textarea class="inp" readonly rows="6" onclick="this.select()" style="resize:none;font-family:monospace;font-size:10px;margin-bottom:14px;color:var(--text-muted)">${txt}</textarea>
+      <button class="btn btn-primary" onclick="if(navigator.clipboard){navigator.clipboard.writeText(A._exportText||'').then(()=>toast('Copied to clipboard')).catch(()=>toast('Press and hold the box to copy manually'))}else{toast('Press and hold the box to copy manually')}">Copy to Clipboard</button>
+      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal=null;A._exportText=null;render()">Done</button>
     </div></div>`;
   }
 
