@@ -147,7 +147,69 @@ const STARTERS=[
 
 function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)).toFixed(2):baseBP;}
 
-// Guess mode + buy price for a custom item from its name
+// Common sizes and their buy price targets for package items
+// Format: { 'size label': base_price }
+const SIZE_PRICES={
+  'Eggs':{'12 ct':3.79,'18 ct':5.49,'24 ct':6.99},
+  'Milk (gallon)':{'1 gallon':4.09,'half gallon':2.49},
+  'Butter (1 lb)':{'1 lb (4 sticks)':4.99,'2 lbs':8.99},
+  'Cheese Block (8 oz)':{'8 oz':3.49,'16 oz':5.99,'32 oz':10.99},
+  'Shredded Cheese (8 oz)':{'8 oz':3.49,'16 oz':5.99},
+  'Cream Cheese (8 oz)':{'8 oz':2.99,'16 oz':4.99},
+  'Yogurt (32 oz)':{'32 oz':4.99,'48 oz':6.99},
+  'Sour Cream (16 oz)':{'16 oz':2.49,'24 oz':3.49},
+  'Orange Juice (52 oz)':{'52 oz':4.49,'89 oz':6.99},
+  'Bacon':{'12 oz':6.99,'16 oz':7.99,'24 oz':10.99},
+  'Breakfast Sausage':{'12 oz':4.49,'16 oz':4.99},
+  'Ham':{'1 lb':4.99,'2 lb':7.99,'3 lb':10.99},
+  'Salmon (frozen)':{'1 lb':9.99,'2 lb':16.99},
+  'Canned Chicken':{'5 oz':2.49,'12.5 oz':4.49},
+  'Potatoes (5 lb bag)':{'3 lb':3.49,'5 lb':4.49,'10 lb':7.99},
+  'Sweet Potatoes (3 lb bag)':{'3 lb':3.99,'5 lb':5.99},
+  'Onions (3 lb bag)':{'2 lb':2.49,'3 lb':3.29,'5 lb':4.99},
+  'Carrots (1 lb bag)':{'1 lb':1.29,'2 lb':2.29},
+  'Bread':{'20 oz':3.49,'24 oz':4.49},
+  'Pasta':{'12 oz':1.49,'16 oz':1.99,'32 oz':3.49},
+  'Peanut Butter':{'16 oz':3.99,'28 oz':5.99,'40 oz':7.99},
+  'Cooking Oil':{'16 oz':5.99,'32 oz':7.99,'48 oz':9.99,'750 ml':9.99},
+  'Chicken Broth':{'32 oz':3.49,'48 oz':4.99},
+  'Rice (2 lb)':{'2 lb':2.49,'5 lb':5.49,'10 lb':9.99},
+  'Flour (5 lb)':{'5 lb':2.99,'10 lb':5.49},
+  'Sugar (4 lb)':{'4 lb':3.49,'10 lb':7.99},
+  'Oats (42 oz)':{'18 oz':3.49,'42 oz':3.99},
+  'Toilet Paper':{'6 rolls':5.99,'12 rolls':7.99,'24 rolls':14.99},
+  'Paper Towels':{'4 rolls':5.99,'6 rolls':7.99,'12 rolls':13.99},
+  'Trash Bags':{'20 ct':6.99,'30 ct':8.49,'45 ct':11.99},
+  'Laundry Detergent':{'32 oz':8.99,'64 oz':10.99,'128 oz':14.99},
+  'Ziplock Bags (gallon)':{'15 ct':4.49,'28 ct':6.99},
+  'Ziplock Bags (quart)':{'20 ct':3.99,'40 ct':5.99},
+  'Dish Soap':{'12 oz':3.29,'19 oz':4.49},
+};
+
+function getSizes(starterName){return SIZE_PRICES[starterName]||null;}
+
+function sizeAdjustedBP(starterName,sizeLabel,baseBP){
+  const sizes=getSizes(starterName);
+  if(sizes&&sizes[sizeLabel])return adjustedBP(sizes[sizeLabel]);
+  return adjustedBP(baseBP);
+}
+
+// Learning: after 5+ logs, check if real average differs from target by >10% and prompt update
+function checkLearning(itemId){
+  const item=A.items.find(i=>i.id===itemId);
+  if(!item)return;
+  const logs=A.logs[itemId]||[];
+  if(logs.length<5)return; // need at least 5 data points
+  const avg=+(logs.reduce((s,l)=>s+l.price,0)/logs.length).toFixed(2);
+  const bp=parseFloat(item.buy_price);
+  const diff=Math.abs(avg-bp)/bp;
+  if(diff>0.10){
+    A._learnSuggest={itemId,avg,current:bp};
+    // show after a short delay so result screen renders first
+    setTimeout(()=>{if(A.modal==='result'){A._learnPending=true;}},100);
+  }
+}
+
 function guessItem(name){
   const n=(name||'').toLowerCase();
   const hasSizeOz=/\d+\s*oz/.test(n);
@@ -213,7 +275,11 @@ function migrateItem(it){
   return it;
 }
 
-function addItem(name,unit,bp,mode){const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);const item={id,name,unit,buy_price:parseFloat(bp),mode:mode||'unit'};A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;}
+function addItem(name,unit,bp,mode,typicalSize){
+  const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  const item={id,name,unit,buy_price:parseFloat(bp),mode:mode||'unit',typicalSize:typicalSize||null};
+  A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;
+}
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
 
 // price stored = exactly what the user typed. No division. Ever.
@@ -226,7 +292,9 @@ function addLog(itemId,price,store,pkgQty,pkgUnit){
   const log={id:'l_'+Date.now(),price:+price.toFixed(2),total:+price.toFixed(2),store:norm(store),date:new Date().toISOString().split('T')[0]};
   if(pkgQty&&parseFloat(pkgQty)>0){log.pkgQty=+parseFloat(pkgQty).toFixed(2);log.pkgUnit=pkgUnit||'ct';}
   if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(log);
-  save();A._logResult={itemId,log};A.modal='result';render();
+  save();A._logResult={itemId,log};
+  checkLearning(itemId);
+  A.modal='result';render();
 }
 function editLog(itemId,logId,newPrice,newPkgQty,newPkgUnit){
   const logs=A.logs[itemId]||[];const log=logs.find(l=>l.id===logId);if(!log)return;
@@ -395,10 +463,14 @@ function buildItemList(){
     unadded.forEach(s=>{
       const abp=adjustedBP(s.bp);
       const lbl=s.mode==='package'?'/pkg':'/lb';
-      h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="const it=addItem('${esc(s.name)}','${s.unit}',${abp},'${s.mode}');A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render()">
+      const hasSizes=!!getSizes(s.name);
+      const onclick=hasSizes
+        ? `A._pendingStarter={name:'${esc(s.name)}',unit:'${s.unit}',mode:'${s.mode}',bp:${abp},starterName:'${esc(s.name)}'};A.modal='sizeSelect';render()`
+        : `const it=addItem('${esc(s.name)}','${s.unit}',${abp},'${s.mode}',null);A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render()`;
+      h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="${onclick}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:14px;font-weight:600">${s.name}</div>
-          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}${lbl}</div><div style="font-size:9px;color:var(--text-hint)">buy target</div></div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}${lbl}</div><div style="font-size:9px;color:var(--text-hint)">${hasSizes?'tap to pick your size':'buy target'}</div></div>
         </div>
       </div>`;
     });
@@ -414,17 +486,22 @@ function itemCard(item,store){
   const better=best&&lp&&best.store!==store&&best.price<lp;
   const cls=s==='buy'?'card card-buy':s==='high'?'card card-pass':'card';
   const ul=priceLabel(item);
-  return`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
+  const sizeTag=item.typicalSize?`<span style="font-size:10px;background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">${item.typicalSize}</span>`:'';
+  const bestInfo=best&&best.pkgQty?` · ${best.pkgQty}${best.pkgUnit}`:'';
+  return`<div class="${cls}" style="padding:12px 14px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
+        <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}${sizeTag}</div>
         <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${ul}</div>
-        ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)} at ${best.store}</div>`:''}
+        ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)}${bestInfo} at ${best.store}</div>`:''}
       </div>
-      <div style="text-align:right;margin-left:12px;flex-shrink:0">
-        ${lp?`<div style="font-size:22px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
-          <div style="font-size:14px;font-weight:700">$${lp.toFixed(2)}</div>`
-        :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
+      <div style="display:flex;align-items:center;gap:8px;margin-left:10px;flex-shrink:0">
+        ${lp?`<div style="text-align:center;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
+          <div style="font-size:22px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
+          <div style="font-size:14px;font-weight:700">$${lp.toFixed(2)}</div>
+        </div>`
+        :`<div style="font-size:12px;color:var(--green);font-weight:600;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">Tap to log</div>`}
+        <button style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px;color:var(--text-hint);line-height:1" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" title="History & edit">📋</button>
       </div>
     </div>
   </div>`;
@@ -705,6 +782,40 @@ function submitLog(itemId){
 }
 
 function rModal(){
+  if(A.modal==='sizeSelect'&&A._pendingStarter){
+    const ps=A._pendingStarter;
+    const sizes=getSizes(ps.starterName)||{};
+    const sizeKeys=Object.keys(sizes);
+    return`<div class="modal-overlay" onclick="A.modal=null;A._pendingStarter=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">${ps.name}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">What size do you usually buy? The app sets your buy target based on the size.</div>
+      ${sizeKeys.map(sz=>{
+        const bp=adjustedBP(sizes[sz]);
+        return`<button class="store-btn" onclick="const it=addItem('${esc(ps.name)}','${ps.unit}',${bp},'${ps.mode}','${esc(sz)}');A.selectedItem=it;A._dealMode='plain';A._pendingStarter=null;A.modal='logPrice';render()">
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700">${sz}</div>
+            <div style="font-size:12px;color:var(--text-muted)">Buy target: $${bp.toFixed(2)}</div>
+          </div>
+          <div style="font-size:12px;color:var(--green);font-weight:700">→</div>
+        </button>`;
+      }).join('')}
+      <button style="width:100%;padding:12px;background:none;border:1px dashed var(--border);border-radius:10px;font-size:13px;color:var(--text-muted);cursor:pointer;margin-top:4px" onclick="const it=addItem('${esc(ps.name)}','${ps.unit}',${ps.bp},'${ps.mode}',null);A.selectedItem=it;A._dealMode='plain';A._pendingStarter=null;A.modal='logPrice';render()">Skip — use the default target ($${ps.bp.toFixed(2)})</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='learnUpdate'&&A._learnSuggest){
+    const ls=A._learnSuggest;
+    const item=A.items.find(i=>i.id===ls.itemId);
+    if(!item){A.modal=null;return'';}
+    return`<div class="modal-overlay" onclick="A.modal=null;A._learnSuggest=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div style="font-size:36px;text-align:center;margin-bottom:8px">📊</div>
+      <div class="modal-title" style="text-align:center">Your prices are talking</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your average price has been <strong>$${ls.avg.toFixed(2)}</strong>. Your current buy target is $${ls.current.toFixed(2)}.<br><br>${ls.avg<ls.current?'Your real prices are consistently lower than your target. Lowering it means you\'ll get green lights that actually reflect a good deal for you.':'Your real prices are running higher than your target. Raising it gives you a more accurate signal for your market.'}</div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="updateBP('${ls.itemId}',${ls.avg});A.modal=null;A._learnSuggest=null;render();toast('Buy target updated to $'+${ls.avg}.toFixed(2))">Update target to $${ls.avg.toFixed(2)}</button>
+      <button class="btn btn-outline" onclick="A.modal=null;A._learnSuggest=null;render()">Keep my current target ($${ls.current.toFixed(2)})</button>
+    </div></div>`;
+  }
+
   if(A.modal==='addStore')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Store</div>
     <input class="inp" id="m-sn" placeholder="e.g. Food Lion, Aldi, Costco" autofocus>
@@ -758,6 +869,7 @@ function rModal(){
       ${s==='high'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--red);margin-bottom:12px">Above your $${bp.toFixed(2)} target — skip if you can.</div>`:''}
       ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${ul}</div>`:''}
       ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> This used to be ${prev.pkgQty}${prev.pkgUnit}. Now it is ${r.log.pkgQty}${r.log.pkgUnit}. Same price, less product.</div>`:''}
+      ${A._learnSuggest&&A._learnSuggest.itemId===r.itemId?`<div style="background:#f0f4ff;border:1px solid #b0bef8;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>📊 Your prices are talking</strong><br>After ${(A.logs[r.itemId]||[]).length} logs, your average is $${A._learnSuggest.avg.toFixed(2)}. Your target is $${A._learnSuggest.current.toFixed(2)}. <button onclick="A.modal='learnUpdate';render()" style="background:none;border:none;color:#4455cc;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline">Update my target →</button></div>`:''}
       <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
       <button onclick="A._shrinkItem='${r.itemId}';A.modal='trackShrink';render()" style="display:block;width:100%;margin-top:10px;background:var(--orange-light);border:2px solid var(--orange);border-radius:10px;color:var(--orange);font-size:14px;font-weight:800;cursor:pointer;padding:12px;text-align:center">📦 Track Package Size — Catch Shrinkflation</button>
       <button style="display:block;width:100%;margin-top:8px;background:var(--red-light);border:1px solid rgba(204,68,68,.2);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${r.itemId}','${r.log.id}');A.modal=null;A._logResult=null;render()">Wrong price? Tap to delete</button>
@@ -886,7 +998,7 @@ function submitCustom(){
   if(!bp||bp<=0)return toast('Enter a buy price target');
   const mode=_customMode;
   const unit=mode==='package'?'package':'lb';
-  const it=addItem(name,unit,bp,mode);
+  const it=addItem(name,unit,bp,mode,null);
   A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render();
 }
 
