@@ -196,22 +196,24 @@ function addItem(name,unit,bp,mode){const id='i_'+Date.now()+'_'+Math.random().t
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
 
 // price stored = exactly what the user typed. No division. Ever.
-// unit-mode: user typed price per lb (or per unit). package-mode: user typed total package price.
-// pkg = shrinkflation count for package items only, otherwise 1.
-function addLog(itemId,price,pkg,store){
+// pkgQty + pkgUnit = optional shrinkflation tracking, stored separately from price.
+function addLog(itemId,price,store,pkgQty,pkgUnit){
   const item=A.items.find(i=>i.id===itemId);if(!item)return;
   store=store||A.activeStore;if(!store)return toast('Pick a store first');
-  price=parseFloat(price);pkg=parseFloat(pkg)||1;
+  price=parseFloat(price);
   if(!price||price<=0)return toast('Enter the price');
-  const log={id:'l_'+Date.now(),price:+price.toFixed(2),total:+price.toFixed(2),pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0]};
+  const log={id:'l_'+Date.now(),price:+price.toFixed(2),total:+price.toFixed(2),store:norm(store),date:new Date().toISOString().split('T')[0]};
+  if(pkgQty&&parseFloat(pkgQty)>0){log.pkgQty=+parseFloat(pkgQty).toFixed(2);log.pkgUnit=pkgUnit||'ct';}
   if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(log);
   save();A._logResult={itemId,log};A.modal='result';render();
 }
-function editLog(itemId,logId,newPrice,newPkg){
+function editLog(itemId,logId,newPrice,newPkgQty,newPkgUnit){
   const logs=A.logs[itemId]||[];const log=logs.find(l=>l.id===logId);if(!log)return;
-  newPrice=parseFloat(newPrice);newPkg=parseFloat(newPkg)||1;
+  newPrice=parseFloat(newPrice);
   if(!newPrice||newPrice<=0)return toast('Enter the price');
-  log.price=+newPrice.toFixed(2);log.total=+newPrice.toFixed(2);log.pkg=newPkg;
+  log.price=+newPrice.toFixed(2);log.total=+newPrice.toFixed(2);
+  if(newPkgQty&&parseFloat(newPkgQty)>0){log.pkgQty=+parseFloat(newPkgQty).toFixed(2);log.pkgUnit=newPkgUnit||'ct';}
+  else{delete log.pkgQty;delete log.pkgUnit;}
   save();render();toast('Updated');
 }
 function deleteLog(itemId,logId){A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);save();render();toast('Deleted');}
@@ -433,8 +435,7 @@ function rDetail(){
   if(!logs.length)h+=`<div class="empty"><div style="font-size:14px">No prices logged yet</div></div>`;
   logs.forEach(l=>{
     const s=sig(l.price,bp);
-    const ctx=l.pkg&&l.pkg>1?(item.mode==='package'?' · '+l.pkg+' ct · $'+(l.total||l.price).toFixed(2)+' pkg':' · '+l.pkg+' '+item.unit+'s · $'+(l.total||l.price*l.pkg).toFixed(2)+' total'):'';
-    h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    const ctx=l.pkgQty?` · ${l.pkgQty}${l.pkgUnit}`:'';    h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:13px;font-weight:600">${l.store}</div>
         <div style="font-size:11px;color:var(--text-muted)">${fmtD(l.date)}${ctx}</div></div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -642,29 +643,13 @@ function logBody(item){
       <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
   }
 
-  // Shrinkflation count — package items only, hidden by default
-  if(isPkg){
-    body+=`<div style="margin-top:14px">
-      <button onclick="toggleShrink()" id="shrink-toggle" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:4px 0;text-decoration:underline">+ Track package count (shrinkflation)</button>
-      <div id="shrink-wrap" style="display:none;margin-top:10px">
-        <div class="lbl">How many in the package?</div>
-        <input class="inp" id="m-pk" style="font-size:20px;font-weight:700;text-align:center;padding:12px" type="number" step="1" placeholder="e.g. 12" inputmode="numeric">
-      </div>
-    </div>`;
-  }
-
   body+=`<div id="uc" style="text-align:center;font-size:20px;font-weight:800;color:var(--green);margin:14px 0;min-height:32px"></div>
     <button class="btn btn-primary" onclick="submitLog('${item.id}')">Log Price</button>
-    <button onclick="if(confirm('Remove ${esc(item.name)} from your list?')){deleteItem('${item.id}');A.modal=null;}" style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:8px;text-decoration:underline">Remove from my list</button>`;
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <button onclick="A._shrinkItem='${item.id}';A.modal='trackShrink';render()" style="background:none;border:none;font-size:13px;font-weight:700;color:var(--green-mid);cursor:pointer;padding:4px 0;text-decoration:underline">📦 Track package size</button>
+      <button onclick="if(confirm('Remove ${esc(item.name)} from your list?')){deleteItem('${item.id}');A.modal=null;}" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:4px 0;text-decoration:underline">Remove from list</button>
+    </div>`;
   return body;
-}
-
-function toggleShrink(){
-  const w=document.getElementById('shrink-wrap'),t=document.getElementById('shrink-toggle');
-  if(!w)return;
-  const open=w.style.display==='none';
-  w.style.display=open?'block':'none';
-  if(t)t.textContent=open?'− Hide package count':'+ Track package count (shrinkflation)';
 }
 
 function renderLogBody(item){
@@ -673,17 +658,15 @@ function renderLogBody(item){
 }
 
 function computePrice(){
-  const item=A.selectedItem;if(!item)return{price:0,pkg:1};
+  const item=A.selectedItem;if(!item)return{price:0};
   const dm=A._dealMode||'plain';
   const raw=parseFloat(document.getElementById('m-p')?.value)||0;
-  const pkg=parseFloat(document.getElementById('m-pk')?.value)||1;
   if(dm==='twofor'){
     const dn=Math.max(2,parseFloat(document.getElementById('m-dealn')?.value)||2);
-    return{price:+(raw/dn).toFixed(2),pkg};
+    return{price:+(raw/dn).toFixed(2)};
   }
-  if(dm==='bogo')return{price:+(raw/2).toFixed(2),pkg};
-  // plain or markdown — price is exactly what was typed
-  return{price:+raw.toFixed(2),pkg};
+  if(dm==='bogo')return{price:+(raw/2).toFixed(2)};
+  return{price:+raw.toFixed(2)};
 }
 
 function calcU(){
@@ -699,9 +682,9 @@ function calcU(){
 }
 
 function submitLog(itemId){
-  const {price,pkg}=computePrice();
+  const {price}=computePrice();
   if(!price||price<=0)return toast('Enter the price');
-  addLog(itemId,price,pkg);
+  addLog(itemId,price);
   A.modal=null;
 }
 
@@ -734,24 +717,23 @@ function rModal(){
   if(A.modal==='result'&&A._logResult){
     const r=A._logResult,item=A.items.find(i=>i.id===r.itemId);
     if(!item){A.modal=null;return'';}
-    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sig(pu,bp),total=r.log.total||pu,pkg=r.log.pkg||1;
+    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sig(pu,bp);
     const best=getBest(item.id),better=best&&best.store!==r.log.store&&best.price<pu;
-    const ul=priceLabel(item),isPkg=item.mode==='package';
+    const ul=priceLabel(item);
     const prev=getPrevAt(item.id,r.log.store,r.log.id);
-    const shrunk=prev&&prev.pkg&&pkg&&prev.pkg>pkg&&prev.total&&total>=prev.total*0.95;
-    const ctxLine=isPkg?(pkg>1?`<div style="font-size:16px;color:var(--text-muted);margin-top:8px">${pkg} in the package</div>`:''):(pkg>1?`<div style="font-size:16px;color:var(--text-muted);margin-top:8px">$${total.toFixed(2)} for ${pkg} ${item.unit}s</div>`:'');
+    // shrinkflation: only flag if both logs have pkgQty with the same unit and current is smaller
+    const shrunk=prev&&prev.pkgQty&&r.log.pkgQty&&prev.pkgUnit===r.log.pkgUnit&&r.log.pkgQty<prev.pkgQty;
     return`<div class="modal-overlay" onclick="A.modal=null;A._logResult=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="result-card ${s==='buy'?'result-buy':s==='high'?'result-pass':'result-ok'}">
         <div style="font-size:48px;margin-bottom:8px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
         <div style="font-size:24px;font-weight:800">${s==='buy'?'BUY IT':s==='high'?'TOO HIGH':'OK PRICE'}</div>
-        ${ctxLine}
         <div style="font-size:32px;font-weight:800;margin:8px 0">$${pu.toFixed(2)}<span style="font-size:14px;font-weight:500;color:var(--text-muted)"> per ${ul}</span></div>
         <div style="font-size:12px;color:var(--text-muted)">${item.name} at ${r.log.store}</div>
       </div>
       ${s==='buy'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--green-bright);margin-bottom:12px">At or below your $${bp.toFixed(2)} target — grab extra!</div>`:''}
       ${s==='high'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--red);margin-bottom:12px">Above your $${bp.toFixed(2)} target — skip if you can.</div>`:''}
       ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${ul}</div>`:''}
-      ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> Last time this was ${prev.pkg} for $${prev.total.toFixed(2)}. Now it is ${pkg} for $${total.toFixed(2)}. You are paying more per item.</div>`:''}
+      ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> This used to be ${prev.pkgQty}${prev.pkgUnit}. Now it is ${r.log.pkgQty}${r.log.pkgUnit}. Same price, less product.</div>`:''}
       <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
       <button style="display:block;width:100%;margin-top:8px;background:var(--red-light);border:1px solid rgba(204,68,68,.2);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${r.itemId}','${r.log.id}');A.modal=null;A._logResult=null;render()">Wrong price? Tap to delete</button>
     </div></div>`;
@@ -771,17 +753,38 @@ function rModal(){
   if(A.modal==='editLog'&&A._editLog){
     const e=A._editLog,item=A.items.find(i=>i.id===e.itemId),l=(A.logs[e.itemId]||[]).find(x=>x.id===e.logId);
     if(!item||!l){A.modal=null;return'';}
-    const isPkg=item.mode==='package';
     const ul=priceLabel(item);
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">Edit Price</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px">${item.name} at ${l.store}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${fmtD(l.date)}</div>
-      <div class="lbl">${isPkg?'Total package price':'Price per '+ul}</div>
+      <div class="lbl">${item.mode==='package'?'Total package price':'Price per lb'}</div>
       <input class="inp" id="m-et" type="number" step="0.01" value="${l.price.toFixed(2)}" inputmode="decimal" style="margin-bottom:14px">
-      ${isPkg?`<div class="lbl">How many in the package? (optional)</div><input class="inp" id="m-ek" type="number" step="1" value="${l.pkg||1}" inputmode="numeric" style="margin-bottom:14px">`:'<input type="hidden" id="m-ek" value="1">'}
-      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek').value);A.modal=null;A._editLog=null;">Save Changes</button>
+      ${l.pkgQty?`<div class="lbl">Package size (${l.pkgUnit})</div><input class="inp" id="m-ek" type="number" step="0.1" value="${l.pkgQty}" inputmode="decimal" style="margin-bottom:14px"><input type="hidden" id="m-eu" value="${l.pkgUnit}">`:'' }
+      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek')?.value,document.getElementById('m-eu')?.value);A.modal=null;A._editLog=null;">Save Changes</button>
       <button style="display:block;width:100%;margin-top:8px;background:none;border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${e.itemId}','${l.id}');A.modal=null;A._editLog=null;">Delete This Entry</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='trackShrink'&&A._shrinkItem){
+    const item=A.items.find(i=>i.id===A._shrinkItem);
+    if(!item){A.modal=null;return'';}
+    const lastLog=(A.logs[item.id]||[])[0];
+    const prev=lastLog&&lastLog.pkgQty?`Last recorded: ${lastLog.pkgQty} ${lastLog.pkgUnit}`:'';
+    return`<div class="modal-overlay" onclick="A.modal='logPrice';render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">📦 Track Package Size</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Record what is in this package so the app can catch shrinkflation — when the package gets smaller but the price stays the same.</div>
+      ${prev?`<div style="font-size:12px;font-weight:700;color:var(--green-mid);margin-bottom:14px">${prev}</div>`:'<div style="margin-bottom:14px"></div>'}
+      <div class="lbl">How much is in the package?</div>
+      <input class="inp" id="sk-qty" type="number" step="0.1" placeholder="e.g. 32" inputmode="decimal" style="font-size:24px;font-weight:800;text-align:center;padding:16px;margin-bottom:12px">
+      <div class="lbl">Unit</div>
+      <div class="deal-tabs" style="margin-bottom:16px">
+        <div class="deal-tab active" id="sk-oz" onclick="setShrinkUnit('oz')">oz</div>
+        <div class="deal-tab" id="sk-lb" onclick="setShrinkUnit('lb')">lbs</div>
+        <div class="deal-tab" id="sk-ct" onclick="setShrinkUnit('ct')">count</div>
+      </div>
+      <button class="btn btn-primary" onclick="saveShrink('${item.id}')">Save Package Size</button>
+      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal='logPrice';render()">← Back to price</button>
     </div></div>`;
   }
 
@@ -796,7 +799,22 @@ function rModal(){
   return'';
 }
 
-// ---- Custom item modal helpers ----
+// ---- Shrinkflation modal helpers ----
+let _shrinkUnit='oz';
+function setShrinkUnit(u){
+  _shrinkUnit=u;
+  ['oz','lb','ct'].forEach(x=>{const el=document.getElementById('sk-'+x);if(el)el.classList.toggle('active',x===u);});
+}
+function saveShrink(itemId){
+  const qty=document.getElementById('sk-qty')?.value;
+  if(!qty||parseFloat(qty)<=0)return toast('Enter the package size');
+  const logs=A.logs[itemId]||[];
+  if(!logs.length)return toast('Log a price first');
+  // attach to the most recent log entry
+  logs[0].pkgQty=+parseFloat(qty).toFixed(2);
+  logs[0].pkgUnit=_shrinkUnit;
+  save();A.modal='logPrice';render();toast('Package size saved');
+}
 let _customMode='unit';
 function setCustomMode(m){
   _customMode=m;
