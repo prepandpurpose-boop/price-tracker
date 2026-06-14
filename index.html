@@ -762,7 +762,7 @@ function rModal(){
     if(!item){A.modal=null;return'';}
     const lastLog=(A.logs[item.id]||[])[0];
     const prev=lastLog&&lastLog.pkgQty?`Last recorded: ${lastLog.pkgQty} ${lastLog.pkgUnit}`:'';
-    return`<div class="modal-overlay" onclick="A.modal='logPrice';render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+    return`<div class="modal-overlay" onclick="A.modal=A._logResult?'result':'logPrice';render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">📦 Track Package Size</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Record what is in this package so the app can catch shrinkflation — when the package gets smaller but the price stays the same.</div>
       ${prev?`<div style="font-size:12px;font-weight:700;color:var(--green-mid);margin-bottom:14px">${prev}</div>`:'<div style="margin-bottom:14px"></div>'}
@@ -810,14 +810,17 @@ function setShrinkUnit(u){
 function saveShrink(itemId){
   const qty=document.getElementById('sk-qty')?.value;
   if(!qty||parseFloat(qty)<=0)return toast('Enter the package size');
+  // only attach to the log that was just created — never to an old one
+  if(!A._logResult||A._logResult.itemId!==itemId)return toast('Log a price first, then track the size');
   const logs=A.logs[itemId]||[];
-  if(!logs.length)return toast('Log a price first');
-  logs[0].pkgQty=+parseFloat(qty).toFixed(2);
-  logs[0].pkgUnit=_shrinkUnit;
-  save();
-  // go back to result screen if we came from there, otherwise close
-  A.modal=A._logResult?'result':'logPrice';
-  render();toast('Package size saved');
+  const target=logs.find(l=>l.id===A._logResult.log.id);
+  if(!target)return toast('Log a price first, then track the size');
+  target.pkgQty=+parseFloat(qty).toFixed(2);
+  target.pkgUnit=_shrinkUnit;
+  // update the in-memory _logResult so the result screen reflects the new size
+  A._logResult.log.pkgQty=target.pkgQty;
+  A._logResult.log.pkgUnit=target.pkgUnit;
+  save();A.modal='result';render();toast('Package size saved');
 }
 let _customMode='unit';
 function setCustomMode(m){
