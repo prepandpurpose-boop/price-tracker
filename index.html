@@ -121,10 +121,10 @@ const STARTERS=[
 {name:'Sugar (4 lb)',unit:'package',mode:'package',bp:3.49},
 {name:'Rice (2 lb)',unit:'package',mode:'package',bp:2.49},
 {name:'Oats (42 oz)',unit:'package',mode:'package',bp:3.99},
-{name:'Pasta',unit:'package',mode:'package',bp:1.49},
+{name:'Pasta',unit:'package',mode:'package',bp:1.99},
 {name:'Peanut Butter',unit:'package',mode:'package',bp:3.99},
-{name:'Cooking Oil',unit:'package',mode:'package',bp:5.99},
-{name:'Chicken Broth',unit:'package',mode:'package',bp:2.49},
+{name:'Cooking Oil',unit:'package',mode:'package',bp:9.99},
+{name:'Chicken Broth',unit:'package',mode:'package',bp:3.49},
 // ── Canned ──
 {name:'Black Beans',unit:'package',mode:'package',bp:1.09},
 {name:'Pinto Beans',unit:'package',mode:'package',bp:1.09},
@@ -150,19 +150,40 @@ function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)
 // Guess mode + buy price for a custom item from its name
 function guessItem(name){
   const n=(name||'').toLowerCase();
-  // check for oz/size indicator — likely a specific package
   const hasSizeOz=/\d+\s*oz/.test(n);
-  const hasSizeLb=/\d+\s*lb/.test(n);
-  // exact-ish match to a starter
+  const has=arr=>arr.some(w=>n.includes(w));
+  // oils — check before starter lookup so premium oil names don't hit generic starters
+  if(has(['olive oil','avocado oil','coconut oil','vegetable oil','canola oil','cooking oil','oil']))
+    return{unit:'package',mode:'package',bp:adjustedBP(9.99)};
+  // exact match to a starter
   const hit=STARTERS.find(s=>n&&(s.name.toLowerCase().includes(n)||n.includes(s.name.toLowerCase())));
   if(hit&&!hasSizeOz)return{unit:hit.unit,mode:hit.mode,bp:adjustedBP(hit.bp)};
-  const has=arr=>arr.some(w=>n.includes(w));
-  // specific package sizes — treat as package mode
-  if(hasSizeOz)return{unit:'package',mode:'package',bp:adjustedBP(3.99)};
-  // by-weight items
-  if(has(['beef','pork','chicken','turkey','steak','roast','meat','sausage','bacon','ham','fish','salmon','shrimp','potato','onion','carrot','banana','apple','flour','sugar','rice','oats','produce','fruit','veggie','vegetable']))return{unit:'lb',mode:'unit',bp:adjustedBP(2.99)};
-  // package items
-  if(has(['butter','cheese','cream cheese','yogurt','milk','juice','soda','water','bread','pasta','bean','beans','tomato','corn','tuna','soup','sauce','paper','towel','tissue','napkin','foil','wrap','bag','trash','soap','detergent','cleaner','box','pack','bottle','jar','can','gallon','dozen','egg','loaf']))return{unit:'package',mode:'package',bp:adjustedBP(3.99)};
+  // specific package sizes — treat as package
+  if(hasSizeOz)return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // by-weight meat/produce items
+  if(has(['beef','pork','chicken','turkey','steak','roast','meat','sausage','bacon','ham','fish','salmon','shrimp','potato','onion','carrot','banana','apple','produce','fruit','veggie','vegetable']))
+    return{unit:'lb',mode:'unit',bp:adjustedBP(2.99)};
+  // pantry/dry goods by weight
+  if(has(['flour','sugar','rice','oats','grain','lentil','dried']))
+    return{unit:'lb',mode:'unit',bp:adjustedBP(1.49)};
+  // dairy packages
+  if(has(['butter','cheese','cream cheese','yogurt','milk','sour cream','creamer','half and half']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // beverages
+  if(has(['juice','soda','water','drink','beverage','broth','stock','kombucha','tea','coffee']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // bread/bakery
+  if(has(['bread','loaf','bun','roll','tortilla','bagel','muffin','croissant']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.49)};
+  // pantry packages
+  if(has(['pasta','bean','beans','tomato','corn','tuna','soup','sauce','peanut butter','nut butter','jam','jelly','syrup','honey','vinegar','mayo','mustard','ketchup','dressing']))
+    return{unit:'package',mode:'package',bp:adjustedBP(3.49)};
+  // household/cleaning
+  if(has(['paper','towel','tissue','napkin','foil','wrap','bag','trash','soap','detergent','cleaner','sponge','bleach']))
+    return{unit:'package',mode:'package',bp:adjustedBP(6.99)};
+  // generic package fallback
+  if(has(['box','pack','bottle','jar','can','container']))
+    return{unit:'package',mode:'package',bp:adjustedBP(3.99)};
   // default: by the pound
   return{unit:'lb',mode:'unit',bp:adjustedBP(2.49)};
 }
@@ -541,7 +562,12 @@ function rMore(){
 
     <div class="help-card" style="margin-bottom:10px">
       <div style="font-size:14px;font-weight:800;margin-bottom:10px">Tip: name items the way you buy them</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">If you always buy the same size, put it in the name — "8oz Cream Cheese," "16oz Shredded Cheddar," "32oz Greek Yogurt." The app sets the buy price target automatically based on your state. That way the green, yellow, and red lights are compared against the right price for that exact item.</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">If you always buy the same size or brand, put it in the name — "Graza Olive Oil," "8oz Cream Cheese," "32oz Greek Yogurt." The more specific the name, the more useful the tracking.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Tip: always check the buy target when adding a custom item</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">When you add a custom item, the app guesses a starting buy target based on your state's average prices for that type of item. That guess is a starting point — not gospel. A generic cooking oil target is not the same as a premium olive oil target.<br><br>Always look at the buy target before tapping Add Item. If it looks too low or too high for what you actually buy, change it right there. You can also update it anytime — tap the item in your list, then tap <strong>Edit Buy Price</strong>.</div>
     </div>
 
     <div class="help-card" style="margin-bottom:10px">
@@ -685,18 +711,26 @@ function rModal(){
     <button class="btn btn-primary" style="margin-top:14px" onclick="addStore(document.getElementById('m-sn').value)">Add & Start Shopping</button>
   </div></div>`;
 
-  if(A.modal==='addItem')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+  if(A.modal==='addItem'){
+    _customMode='unit'; // always reset when modal opens
+    return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Custom Item</div>
     <div class="lbl">Item name</div>
-    <input class="inp" id="m-n" placeholder='e.g. "8oz Cream Cheese" or "Ground Beef"' style="margin-bottom:14px" oninput="guessCustom()">
-    <div class="lbl">How is it priced?</div>
-    <div class="deal-tabs" style="margin-bottom:6px">
-      <div class="deal-tab active" id="cm-unit" onclick="setCustomMode('unit')">By the pound</div>
+    <input class="inp" id="m-n" placeholder='e.g. "Graza Olive Oil" or "Ground Pork"' style="margin-bottom:14px" oninput="guessCustom()" autofocus>
+    <div class="lbl">How is it priced at the store?</div>
+    <div class="deal-tabs" style="margin-bottom:14px">
+      <div class="deal-tab" id="cm-unit" onclick="setCustomMode('unit')">By the pound</div>
       <div class="deal-tab" id="cm-pkg" onclick="setCustomMode('package')">By the package</div>
     </div>
-    <div id="m-bphint" style="font-size:11px;color:var(--text-hint);margin-bottom:16px;min-height:16px">Type a name and we'll set the buy target automatically.</div>
+    <div class="lbl">My buy target — I stock up at or below this price</div>
+    <div style="position:relative;margin-bottom:6px">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;font-weight:800;color:var(--text-muted)">$</span>
+      <input class="inp" id="m-bp" type="number" step="0.01" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800;padding:12px 12px 12px 28px">
+    </div>
+    <div id="m-bphint" style="font-size:12px;color:var(--text-hint);margin-bottom:16px;min-height:16px;line-height:1.5">Type a name above and we'll suggest a starting target. Always check it — especially for specialty or premium items.</div>
     <button class="btn btn-primary" onclick="submitCustom()">Add Item</button>
   </div></div>`;
+  }
 
   if(A.modal==='logPrice'&&A.selectedItem){
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
@@ -831,18 +865,27 @@ function setCustomMode(m){
 function guessCustom(){
   const name=document.getElementById('m-n')?.value||'';
   const hint=document.getElementById('m-bphint');
-  if(!name.trim()){if(hint)hint.textContent='Type a name and we\'ll set the buy target automatically.';return;}
+  const bpField=document.getElementById('m-bp');
+  if(!name.trim()){
+    if(hint)hint.textContent='Type a name above and we\'ll suggest a starting target. Always check it — especially for specialty or premium items.';
+    return;
+  }
   const g=guessItem(name);
   setCustomMode(g.mode);
-  if(hint)hint.textContent='Buy target: $'+g.bp.toFixed(2)+(g.mode==='package'?' per package':' per lb')+' — based on your state\'s average.';
+  // only pre-fill if empty so user edits aren't overwritten
+  if(bpField&&!bpField.value)bpField.value=g.bp.toFixed(2);
+  if(hint){
+    const ul=g.mode==='package'?'package':'lb';
+    hint.textContent='Suggested target: $'+g.bp.toFixed(2)+' per '+ul+' based on average prices. Change it if your store runs higher or lower, or if you buy a premium brand.';
+  }
 }
 function submitCustom(){
   const name=document.getElementById('m-n')?.value||'';
   if(!name.trim())return toast('Enter an item name');
+  const bp=parseFloat(document.getElementById('m-bp')?.value);
+  if(!bp||bp<=0)return toast('Enter a buy price target');
   const mode=_customMode;
-  const g=guessItem(name);
   const unit=mode==='package'?'package':'lb';
-  const bp=mode===g.mode?g.bp:adjustedBP(mode==='package'?3.99:2.99);
   const it=addItem(name,unit,bp,mode);
   A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render();
 }
