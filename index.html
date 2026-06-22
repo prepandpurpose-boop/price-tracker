@@ -203,7 +203,8 @@ function checkLearning(itemId){
   const avg=+(logs.reduce((s,l)=>s+l.price,0)/logs.length).toFixed(2);
   const bp=parseFloat(item.buy_price);
   const diff=Math.abs(avg-bp)/bp;
-  if(diff>0.10){
+  // Estimated items never had a real target to begin with — always offer to set the real one once she has 5 logs
+  if(item.isEstimated||diff>0.10){
     A._learnSuggest={itemId,avg,current:bp};
     // show after a short delay so result screen renders first
     setTimeout(()=>{if(A.modal==='result'){A._learnPending=true;}},100);
@@ -250,8 +251,8 @@ function guessItem(name){
   return{unit:'lb',mode:'unit',bp:adjustedBP(2.49)};
 }
 
-function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState}));}
-function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=(d.items||[]).map(migrateItem);A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;if(A.userState)A.page='store_select';}}catch(e){}}
+function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState,seenIntro:A.seenIntro||false}));}
+function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=(d.items||[]).map(migrateItem);A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;A.seenIntro=d.seenIntro||false;if(A.userState)A.page='store_select';}}catch(e){}}
 
 // Backfill mode on items saved before this version
 function migrateItem(it){
@@ -275,9 +276,9 @@ function migrateItem(it){
   return it;
 }
 
-function addItem(name,unit,bp,mode,typicalSize){
+function addItem(name,unit,bp,mode,typicalSize,isEstimated){
   const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  const item={id,name,unit,buy_price:parseFloat(bp),mode:mode||'unit',typicalSize:typicalSize||null};
+  const item={id,name,unit,buy_price:parseFloat(bp),mode:mode||'unit',typicalSize:typicalSize||null,isEstimated:!!isEstimated};
   A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;
 }
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
@@ -306,7 +307,7 @@ function editLog(itemId,logId,newPrice,newPkgQty,newPkgUnit){
   save();render();toast('Updated');
 }
 function deleteLog(itemId,logId){A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);save();render();toast('Deleted');}
-function updateBP(id,bp){const it=A.items.find(i=>i.id===id);if(it){it.buy_price=parseFloat(bp);save();render();toast('Updated');}}
+function updateBP(id,bp){const it=A.items.find(i=>i.id===id);if(it){it.buy_price=parseFloat(bp);it.isEstimated=false;save();render();toast('Updated');}}
 function renameItem(id,name){const it=A.items.find(i=>i.id===id);if(it&&name.trim()){it.name=name.trim();save();render();toast('Renamed');}}
 function addStore(name){name=norm(name);if(!name)return toast('Enter a store name');if(!A.stores.includes(name))A.stores.push(name);save();A.activeStore=name;A.page='shopping';A.modal=null;render();toast(name+' added');}
 function deleteStore(name){
@@ -413,8 +414,20 @@ function rHdr(mode){
 }
 
 function rStoreSelect(){
-  let h=`<div class="cnt" style="padding-top:16px">
-    <div class="prompt-card"><div style="font-size:22px;margin-bottom:8px">🛒</div><div style="font-size:18px;font-weight:800;margin-bottom:6px">Where are you shopping?</div><div style="font-size:13px;opacity:.85">Pick your store to start</div></div>`;
+  let h=`<div class="cnt" style="padding-top:16px">`;
+  if(!A.seenIntro){
+    h+=`<div class="help-card" style="margin-bottom:16px;border:2px solid var(--green);position:relative">
+      <button onclick="A.seenIntro=true;save();render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:18px;color:var(--text-hint);cursor:pointer;padding:4px">×</button>
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:var(--green)">👋 How This Works</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        <strong>1.</strong> Add a store, then tap an item to log the price you see on the shelf — by the pound for meat and produce, or the total package price for everything else.<br><br>
+        <strong>2.</strong> 🟢 Green means buy it. 🟡 Yellow means an ok price. 🔴 Red means skip it for now.<br><br>
+        <strong>3.</strong> Log a few prices for any item and the app learns your real numbers — no guessing needed.
+      </div>
+      <button onclick="A.seenIntro=true;save();render()" style="margin-top:12px;background:none;border:none;font-size:12px;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Got it, hide this</button>
+    </div>`;
+  }
+  h+=`<div class="prompt-card"><div style="font-size:22px;margin-bottom:8px">🛒</div><div style="font-size:18px;font-weight:800;margin-bottom:6px">Where are you shopping?</div><div style="font-size:13px;opacity:.85">Pick your store to start</div></div>`;
   A.stores.forEach(s=>{
     h+=`<button class="store-btn" onclick="A.activeStore='${esc(s)}';A.page='shopping';A.search='';render()"><span style="font-size:22px">🏪</span><div style="font-size:15px;font-weight:700">${s}</div></button>`;
   });
@@ -492,7 +505,7 @@ function itemCard(item,store){
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div style="flex:1;min-width:0;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
         <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}${sizeTag}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${ul}</div>
+        <div style="font-size:11px;color:${item.isEstimated?'var(--text-hint)':'var(--text-muted)'}">${item.isEstimated?'📍 ~$'+bp.toFixed(2)+'/'+ul+' typical':'Buy under $'+bp.toFixed(2)+'/'+ul}</div>
         ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)}${bestInfo} at ${best.store}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:10px;flex-shrink:0">
@@ -721,7 +734,9 @@ function logBody(item){
   const isPkg=item.mode==='package';
 
   let body=`<div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${ul}</div>
+    ${item.isEstimated
+      ?`<div style="font-size:12px;color:var(--text-hint);margin-bottom:14px">📍 Typical price in your area: around $${parseFloat(item.buy_price).toFixed(2)} per ${ul} — just a rough starting point. Log what you actually see below.</div>`
+      :`<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${ul}</div>`}
     ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best seen:</strong> $${best.price.toFixed(2)}/${ul} at ${best.store}</div>`:''}
     <div class="deal-tabs" style="font-size:11px">
       <div class="deal-tab ${dm==='plain'?'active':''}" onclick="setDeal('plain')">Regular</div>
@@ -807,12 +822,15 @@ function rModal(){
     const ls=A._learnSuggest;
     const item=A.items.find(i=>i.id===ls.itemId);
     if(!item){A.modal=null;return'';}
+    const wasEstimated=item.isEstimated;
     return`<div class="modal-overlay" onclick="A.modal=null;A._learnSuggest=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div style="font-size:36px;text-align:center;margin-bottom:8px">📊</div>
       <div class="modal-title" style="text-align:center">Your prices are talking</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your average price has been <strong>$${ls.avg.toFixed(2)}</strong>. Your current buy target is $${ls.current.toFixed(2)}.<br><br>${ls.avg<ls.current?'Your real prices are consistently lower than your target. Lowering it means you\'ll get green lights that actually reflect a good deal for you.':'Your real prices are running higher than your target. Raising it gives you a more accurate signal for your market.'}</div>
-      <button class="btn btn-primary" style="margin-bottom:8px" onclick="updateBP('${ls.itemId}',${ls.avg});A.modal=null;A._learnSuggest=null;render();toast('Buy target updated to $'+${ls.avg}.toFixed(2))">Update target to $${ls.avg.toFixed(2)}</button>
-      <button class="btn btn-outline" onclick="A.modal=null;A._learnSuggest=null;render()">Keep my current target ($${ls.current.toFixed(2)})</button>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">${wasEstimated
+        ?`Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your real average is <strong>$${ls.avg.toFixed(2)}</strong>. This is from your own shopping — much better than the rough estimate we started with. Want to set this as your buy target?`
+        :`Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your average price has been <strong>$${ls.avg.toFixed(2)}</strong>. Your current buy target is $${ls.current.toFixed(2)}.<br><br>${ls.avg<ls.current?'Your real prices are consistently lower than your target. Lowering it means you\'ll get green lights that actually reflect a good deal for you.':'Your real prices are running higher than your target. Raising it gives you a more accurate signal for your market.'}`}</div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="updateBP('${ls.itemId}',${ls.avg});A.modal=null;A._learnSuggest=null;render();toast('Buy target updated to $'+${ls.avg}.toFixed(2))">Set target to $${ls.avg.toFixed(2)}</button>
+      <button class="btn btn-outline" onclick="A.modal=null;A._learnSuggest=null;render()">${wasEstimated?'Not yet':'Keep my current target ($'+ls.current.toFixed(2)+')'}</button>
     </div></div>`;
   }
 
@@ -827,19 +845,14 @@ function rModal(){
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Custom Item</div>
     <div class="lbl">Item name</div>
-    <input class="inp" id="m-n" placeholder='e.g. "Graza Olive Oil" or "Ground Pork"' style="margin-bottom:14px" oninput="guessCustom()" autofocus>
+    <input class="inp" id="m-n" placeholder='e.g. "Graza Olive Oil" or "Ground Pork"' style="margin-bottom:14px" oninput="guessCustomMode()" autofocus>
     <div class="lbl">How is it priced at the store?</div>
-    <div class="deal-tabs" style="margin-bottom:14px">
+    <div class="deal-tabs" style="margin-bottom:8px">
       <div class="deal-tab" id="cm-unit" onclick="setCustomMode('unit')">By the pound</div>
       <div class="deal-tab" id="cm-pkg" onclick="setCustomMode('package')">By the package</div>
     </div>
-    <div class="lbl">My buy target — I stock up at or below this price</div>
-    <div style="position:relative;margin-bottom:6px">
-      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;font-weight:800;color:var(--text-muted)">$</span>
-      <input class="inp" id="m-bp" type="number" step="0.01" placeholder="0.00" inputmode="decimal" style="font-size:22px;font-weight:800;padding:12px 12px 12px 28px">
-    </div>
-    <div id="m-bphint" style="font-size:12px;color:var(--text-hint);margin-bottom:16px;min-height:16px;line-height:1.5">Type a name above and we'll suggest a starting target. Always check it — especially for specialty or premium items.</div>
-    <button class="btn btn-primary" onclick="submitCustom()">Add Item</button>
+    <div style="font-size:12px;color:var(--text-hint);margin-bottom:16px;line-height:1.5">Pick whichever matches the shelf tag. You'll log the exact price you see on the next screen — no guessing.</div>
+    <button class="btn btn-primary" onclick="submitCustom()">Next — Log the Price</button>
   </div></div>`;
   }
 
@@ -869,9 +882,9 @@ function rModal(){
       ${s==='high'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--red);margin-bottom:12px">Above your $${bp.toFixed(2)} target — skip if you can.</div>`:''}
       ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${ul}</div>`:''}
       ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> This used to be ${prev.pkgQty}${prev.pkgUnit}. Now it is ${r.log.pkgQty}${r.log.pkgUnit}. Same price, less product.</div>`:''}
-      ${A._learnSuggest&&A._learnSuggest.itemId===r.itemId?`<div style="background:#f0f4ff;border:1px solid #b0bef8;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>📊 Your prices are talking</strong><br>After ${(A.logs[r.itemId]||[]).length} logs, your average is $${A._learnSuggest.avg.toFixed(2)}. Your target is $${A._learnSuggest.current.toFixed(2)}. <button onclick="A.modal='learnUpdate';render()" style="background:none;border:none;color:#4455cc;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline">Update my target →</button></div>`:''}
+      ${A._learnSuggest&&A._learnSuggest.itemId===r.itemId?`<div style="background:#f0f4ff;border:1px solid #b0bef8;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>📊 Your prices are talking</strong><br>${A.items.find(i=>i.id===r.itemId)?.isEstimated?`After ${(A.logs[r.itemId]||[]).length} logs, your real average is $${A._learnSuggest.avg.toFixed(2)}.`:`After ${(A.logs[r.itemId]||[]).length} logs, your average is $${A._learnSuggest.avg.toFixed(2)}. Your target is $${A._learnSuggest.current.toFixed(2)}.`} <button onclick="A.modal='learnUpdate';render()" style="background:none;border:none;color:#4455cc;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline">Set my target →</button></div>`:''}
       <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
-      <button onclick="A._shrinkItem='${r.itemId}';A.modal='trackShrink';render()" style="display:block;width:100%;margin-top:10px;background:var(--orange-light);border:2px solid var(--orange);border-radius:10px;color:var(--orange);font-size:14px;font-weight:800;cursor:pointer;padding:12px;text-align:center">📦 Track Package Size — Catch Shrinkflation</button>
+      <button onclick="A._shrinkItem='${r.itemId}';A.modal='trackShrink';render()" style="display:block;width:100%;margin-top:10px;background:#eef5fb;border:2px solid #4a90c4;border-radius:10px;color:#2c6694;font-size:14px;font-weight:800;cursor:pointer;padding:12px;text-align:center">📦 Track Package Size — Catch Shrinkflation</button>
       <button style="display:block;width:100%;margin-top:8px;background:var(--red-light);border:1px solid rgba(204,68,68,.2);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${r.itemId}','${r.log.id}');A.modal=null;A._logResult=null;render()">Wrong price? Tap to delete</button>
     </div></div>`;
   }
@@ -974,31 +987,22 @@ function setCustomMode(m){
   const u=document.getElementById('cm-unit'),p=document.getElementById('cm-pkg');
   if(u&&p){u.classList.toggle('active',m==='unit');p.classList.toggle('active',m==='package');}
 }
-function guessCustom(){
+function guessCustomMode(){
   const name=document.getElementById('m-n')?.value||'';
-  const hint=document.getElementById('m-bphint');
-  const bpField=document.getElementById('m-bp');
-  if(!name.trim()){
-    if(hint)hint.textContent='Type a name above and we\'ll suggest a starting target. Always check it — especially for specialty or premium items.';
-    return;
-  }
+  if(!name.trim())return;
   const g=guessItem(name);
   setCustomMode(g.mode);
-  // only pre-fill if empty so user edits aren't overwritten
-  if(bpField&&!bpField.value)bpField.value=g.bp.toFixed(2);
-  if(hint){
-    const ul=g.mode==='package'?'package':'lb';
-    hint.textContent='Suggested target: $'+g.bp.toFixed(2)+' per '+ul+' based on average prices. Change it if your store runs higher or lower, or if you buy a premium brand.';
-  }
 }
 function submitCustom(){
   const name=document.getElementById('m-n')?.value||'';
   if(!name.trim())return toast('Enter an item name');
-  const bp=parseFloat(document.getElementById('m-bp')?.value);
-  if(!bp||bp<=0)return toast('Enter a buy price target');
   const mode=_customMode;
   const unit=mode==='package'?'package':'lb';
-  const it=addItem(name,unit,bp,mode,null);
+  const g=guessItem(name);
+  // buy_price starts as a rough background estimate — flagged isEstimated so the log
+  // screen shows it as "typical price in your area" rather than a confirmed target.
+  // The learning system (5+ real logs) will replace it with her actual average.
+  const it=addItem(name,unit,g.bp,mode,null,true);
   A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render();
 }
 
