@@ -123,6 +123,34 @@ const STARTERS=[
 
 function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)).toFixed(2):baseBP;}
 
+function suggestBuyPrice(name,unit){
+  if(!name||!name.trim())return{price:0,source:null,matched:false};
+  const n=name.toLowerCase().trim();
+  let best=null,bestScore=0;
+  STARTERS.forEach(s=>{
+    const sn=s.name.toLowerCase();
+    const nWords=n.split(/\s+/).filter(w=>w.length>2);
+    const sWords=sn.replace(/[()]/g,'').split(/\s+/).filter(w=>w.length>2);
+    let score=0;
+    nWords.forEach(w=>{if(sWords.some(sw=>sw.includes(w)||w.includes(sw)))score++;});
+    if(n.includes(sn)||sn.includes(n))score+=2;
+    if(score>bestScore){bestScore=score;best=s;}
+  });
+  if(best&&bestScore>0)return{price:adjustedBP(best.bp),source:best.name,matched:true};
+  const genericByUnit={lb:3.49,oz:1.99,gallon:3.99,dozen:2.99,count:1.99,loaf:3.49};
+  return{price:adjustedBP(genericByUnit[unit]||2.99),source:null,matched:false};
+}
+function updateSuggestedPrice(){
+  const name=document.getElementById('m-n')?.value||'';
+  const unit=document.getElementById('m-u')?.value||'lb';
+  const bpInput=document.getElementById('m-bp');
+  const suggestEl=document.getElementById('m-bp-suggest');
+  if(!name.trim()){if(suggestEl)suggestEl.textContent='';return;}
+  const sug=suggestBuyPrice(name,unit);
+  if(suggestEl)suggestEl.textContent=sug.matched?`💡 Suggested $${sug.price.toFixed(2)} — based on ${sug.source}`:`💡 Estimated $${sug.price.toFixed(2)} — adjust if you know better`;
+  if(bpInput&&!bpInput.dataset.touched)bpInput.value=sug.price.toFixed(2);
+}
+
 function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState}));}
 function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=d.items||[];A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;if(A.userState)A.page='store_select';}}catch(e){}}
 
@@ -141,8 +169,53 @@ function recalcLearnedBuyPrice(itemId){
 }
 function addItem(name,cat,unit,bp){const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);const item={id,name,category:cat,unit,buy_price:parseFloat(bp)};A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;}
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
-function addLog(itemId,total,pkg,store){store=store||A.activeStore;if(!store)return toast('Pick a store first');total=parseFloat(total);pkg=parseFloat(pkg)||1;if(!total||total<=0)return toast('Enter the price');const perUnit=+(total/pkg).toFixed(2);const log={id:'l_'+Date.now(),price:perUnit,total:total,pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0]};if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(log);recalcLearnedBuyPrice(itemId);save();A._logResult={itemId,log};A.modal='result';render();}
-function editLog(itemId,logId,newTotal,newPkg){const logs=A.logs[itemId]||[];const log=logs.find(l=>l.id===logId);if(!log)return;newTotal=parseFloat(newTotal);newPkg=parseFloat(newPkg)||1;if(!newTotal||newTotal<=0)return toast('Enter the price');log.total=newTotal;log.pkg=newPkg;log.price=+(newTotal/newPkg).toFixed(2);recalcLearnedBuyPrice(itemId);save();render();toast('Updated');}
+function addLog(itemId,priceInput,qtyInput,store){
+  store=store||A.activeStore;
+  if(!store)return toast('Pick a store first');
+  const item=A.items.find(i=>i.id===itemId);
+  if(!item)return;
+  const isDirectUnit=item.unit==='lb'||item.unit==='oz';
+  let perUnit,total,pkg;
+  if(isDirectUnit){
+    perUnit=parseFloat(priceInput);
+    pkg=parseFloat(qtyInput)||1;
+    total=+(perUnit*pkg).toFixed(2);
+  }else{
+    total=parseFloat(priceInput);
+    pkg=parseFloat(qtyInput)||1;
+    perUnit=+(total/pkg).toFixed(2);
+  }
+  if(!perUnit||perUnit<=0)return toast('Enter the price');
+  const log={id:'l_'+Date.now(),price:perUnit,total:total,pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0]};
+  if(!A.logs[itemId])A.logs[itemId]=[];
+  A.logs[itemId].unshift(log);
+  recalcLearnedBuyPrice(itemId);
+  save();
+  A._logResult={itemId,log};
+  A.modal='result';
+  render();
+}
+function editLog(itemId,logId,newPriceInput,newQtyInput){
+  const item=A.items.find(i=>i.id===itemId);
+  const logs=A.logs[itemId]||[];
+  const log=logs.find(l=>l.id===logId);
+  if(!log||!item)return;
+  const isDirectUnit=item.unit==='lb'||item.unit==='oz';
+  let perUnit,total,pkg;
+  if(isDirectUnit){
+    perUnit=parseFloat(newPriceInput);
+    pkg=parseFloat(newQtyInput)||1;
+    total=+(perUnit*pkg).toFixed(2);
+  }else{
+    total=parseFloat(newPriceInput);
+    pkg=parseFloat(newQtyInput)||1;
+    perUnit=+(total/pkg).toFixed(2);
+  }
+  if(!perUnit||perUnit<=0)return toast('Enter the price');
+  log.total=total;log.pkg=pkg;log.price=perUnit;
+  recalcLearnedBuyPrice(itemId);
+  save();render();toast('Updated');
+}
 function deleteLog(itemId,logId){A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);recalcLearnedBuyPrice(itemId);save();render();toast('Deleted');}
 function updateBP(id,bp){const it=A.items.find(i=>i.id===id);if(it){it.buy_price=parseFloat(bp);save();render();toast('Updated');}}
 function renameItem(id,name){const it=A.items.find(i=>i.id===id);if(it&&name.trim()){it.name=name.trim();save();render();toast('Renamed');}}
@@ -408,26 +481,27 @@ function rModal(){
 
   if(A.modal==='addItem')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Custom Item</div>
-    <input class="inp" id="m-n" placeholder="Item name" style="margin-bottom:10px">
+    <input class="inp" id="m-n" placeholder="Item name" style="margin-bottom:10px" oninput="updateSuggestedPrice()">
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="lbl">Price per ___?</div><select class="inp" id="m-u">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select>
+      <div class="lbl">Price per ___?</div><select class="inp" id="m-u" onchange="updateSuggestedPrice()">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select>
     </div>
     <div class="lbl">Buy price — stock up below this</div>
-    <input class="inp" id="m-bp" type="number" step="0.01" placeholder="e.g. 1.99" inputmode="decimal" style="margin-bottom:14px">
+    <div id="m-bp-suggest" style="font-size:12px;color:var(--green);margin-bottom:6px;min-height:16px;font-weight:600"></div>
+    <input class="inp" id="m-bp" type="number" step="0.01" placeholder="Type an item name above to get a suggestion" inputmode="decimal" style="margin-bottom:14px" oninput="this.dataset.touched='1'">
     <button class="btn btn-primary" onclick="const it=addItem(document.getElementById('m-n').value,'Other',document.getElementById('m-u').value,document.getElementById('m-bp').value);A.selectedItem=it;A.modal='logPrice';render()">Add & Log Price</button>
   </div></div>`;
 
   if(A.modal==='logPrice'&&A.selectedItem){
     const item=A.selectedItem,best=getBest(item.id);
+    const isDirectUnit=item.unit==='lb'||item.unit==='oz';
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${item.unit}</div>
       ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${item.unit} at ${best.store}</div>`:''}
-      <div class="lbl">What is the total price on the tag?</div>
+      <div class="lbl">${isDirectUnit?`What is the price per ${item.unit} on the tag?`:'What is the total price on the tag?'}</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU('${item.unit}')">
       <div class="lbl" style="margin-top:12px">${
-  item.unit==='lb'?'How many lbs?':
-  item.unit==='oz'?'How many oz?':
+  isDirectUnit?`How many ${item.unit}s are you buying? (optional)`:
   item.unit==='gallon'?'How many gallons?':
   item.unit==='dozen'?'How many dozen?':
   item.unit==='loaf'?'How many loaves?':
@@ -488,15 +562,15 @@ function rModal(){
   if(A.modal==='editLog'&&A._editLog){
     const e=A._editLog,item=A.items.find(i=>i.id===e.itemId),l=(A.logs[e.itemId]||[]).find(x=>x.id===e.logId);
     if(!item){A.modal=null;return'';}
+    const isDirectUnit=item.unit==='lb'||item.unit==='oz';
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">Edit Price</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px">${item.name} at ${l.store}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${fmtD(l.date)}</div>
-      <div class="lbl">Total price</div>
-      <input class="inp" id="m-et" type="number" step="0.01" value="${(l.total||l.price).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
+      <div class="lbl">${isDirectUnit?`Price per ${item.unit}`:'Total price'}</div>
+      <input class="inp" id="m-et" type="number" step="0.01" value="${(isDirectUnit?l.price:(l.total||l.price)).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
       <div class="lbl">${
-  item.unit==='lb'?'How many lbs?':
-  item.unit==='oz'?'How many oz?':
+  isDirectUnit?`How many ${item.unit}s (optional)`:
   item.unit==='gallon'?'How many gallons?':
   item.unit==='dozen'?'How many dozen?':
   item.unit==='loaf'?'How many loaves?':
@@ -510,7 +584,7 @@ function rModal(){
   return'';
 }
 
-function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(u){if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}}
+function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(!u)return;const isDirectUnit=unit==='lb'||unit==='oz';if(isDirectUnit){u.textContent=(p>0&&k>1)?'= $'+(p*k).toFixed(2)+' total for '+k+' '+unit+'s':'';}else{if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}}
 
 load();render();
 
