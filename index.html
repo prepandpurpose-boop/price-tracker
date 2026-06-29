@@ -167,55 +167,36 @@ function recalcLearnedBuyPrice(itemId){
   const avg=trimmed.reduce((s,p)=>s+p,0)/trimmed.length;
   item.buy_price=+avg.toFixed(2);
 }
-function addItem(name,cat,unit,bp){const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);const item={id,name,category:cat,unit,buy_price:parseFloat(bp)};A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;}
+function addItem(name,cat,unit,bp,confident){const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);const item={id,name,category:cat,unit,buy_price:parseFloat(bp),confident:confident!==false};A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;}
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
 function addLog(itemId,priceInput,qtyInput,store){
   store=store||A.activeStore;
   if(!store)return toast('Pick a store first');
   const item=A.items.find(i=>i.id===itemId);
   if(!item)return;
-  const isDirectUnit=item.unit==='lb'||item.unit==='oz';
-  const usePerUnitMode=isDirectUnit&&(A._logMode!=='package');
-  let perUnit,total,pkg;
-  if(usePerUnitMode){
-    perUnit=parseFloat(priceInput);
-    pkg=parseFloat(qtyInput)||1;
-    total=+(perUnit*pkg).toFixed(2);
-  }else{
-    total=parseFloat(priceInput);
-    pkg=parseFloat(qtyInput)||1;
-    perUnit=+(total/pkg).toFixed(2);
-  }
+  const total=parseFloat(priceInput);
+  const pkg=parseFloat(qtyInput)||1;
+  const perUnit=+(total/pkg).toFixed(2);
   if(!perUnit||perUnit<=0)return toast('Enter the price');
-  const log={id:'l_'+Date.now(),price:perUnit,total:total,pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0]};
+  const log={id:'l_'+Date.now(),price:perUnit,total:total,pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0],dealType:A._dealType||'regular'};
   if(!A.logs[itemId])A.logs[itemId]=[];
   A.logs[itemId].unshift(log);
   recalcLearnedBuyPrice(itemId);
   save();
   A._logResult={itemId,log};
   A.modal='result';
-  A._logMode=null;
+  A._dealType=null;
   render();
 }
-function editLog(itemId,logId,newPriceInput,newQtyInput){
-  const item=A.items.find(i=>i.id===itemId);
+function editLog(itemId,logId,newTotal,newQty){
   const logs=A.logs[itemId]||[];
   const log=logs.find(l=>l.id===logId);
-  if(!log||!item)return;
-  const isDirectUnit=item.unit==='lb'||item.unit==='oz';
-  const usePerUnitMode=isDirectUnit&&(A._logMode!=='package');
-  let perUnit,total,pkg;
-  if(usePerUnitMode){
-    perUnit=parseFloat(newPriceInput);
-    pkg=parseFloat(newQtyInput)||1;
-    total=+(perUnit*pkg).toFixed(2);
-  }else{
-    total=parseFloat(newPriceInput);
-    pkg=parseFloat(newQtyInput)||1;
-    perUnit=+(total/pkg).toFixed(2);
-  }
+  if(!log)return;
+  newTotal=parseFloat(newTotal);
+  const pkg=parseFloat(newQty)||1;
+  const perUnit=+(newTotal/pkg).toFixed(2);
   if(!perUnit||perUnit<=0)return toast('Enter the price');
-  log.total=total;log.pkg=pkg;log.price=perUnit;
+  log.total=newTotal;log.pkg=pkg;log.price=perUnit;
   recalcLearnedBuyPrice(itemId);
   save();render();toast('Updated');
 }
@@ -225,6 +206,14 @@ function renameItem(id,name){const it=A.items.find(i=>i.id===id);if(it&&name.tri
 function addStore(name){name=norm(name);if(!name)return toast('Enter a store name');if(!A.stores.includes(name))A.stores.push(name);save();A.activeStore=name;A.page='shopping';A.modal=null;render();toast(name+' added');}
 function norm(s){if(!s||!s.trim())return'';return s.trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
 function sig(price,bp){if(price<=bp)return'buy';if(price<=bp*1.15)return'ok';return'high';}
+function sigSmart(item,price){
+  const bp=parseFloat(item.buy_price);
+  const logs=A.logs[item.id]||[];
+  if(item.confident===false&&logs.length<5){
+    return price<=bp?'buy':'ok';// never red while uncertain
+  }
+  return sig(price,bp);
+}
 function getBest(id){const l=A.logs[id]||[];if(!l.length)return null;return l.reduce((b,x)=>x.price<b.price?x:b,l[0]);}
 function getLast(id,store){return(A.logs[id]||[]).filter(l=>l.store===store).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;}
 function getPrevAt(id,store,excludeId){return(A.logs[id]||[]).filter(l=>l.store===store&&l.id!==excludeId).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;}
@@ -360,15 +349,15 @@ function buildItemList(){
 
 function itemCard(item,store){
   const bp=parseFloat(item.buy_price),last=getLast(item.id,store),best=getBest(item.id);
-  const lp=last?last.price:null,s=lp?sig(lp,bp):null;
+  const lp=last?last.price:null,s=lp?sigSmart(item,lp):null;
   const better=best&&lp&&best.store!==store&&best.price<lp;
   const cls=s==='buy'?'card card-buy':s==='high'?'card card-pass':'card';
-  return`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._logMode=null;A.modal='logPrice';render()">
+  return`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealType=null;A.modal='logPrice';render()">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px">
           <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-          <button style="background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:2px 4px;flex-shrink:0" onclick="event.stopPropagation();A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" title="Edit item">ⓘ</button>
+          <button style="background:var(--green);border:none;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;font-size:14px" onclick="event.stopPropagation();A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" title="Edit item">✏️</button>
         </div>
         <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${item.unit}</div>
         ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)} at ${best.store}</div>`:''}
@@ -397,14 +386,14 @@ function rDetail(){
     <div class="sec-label">History (${logs.length})</div>`;
   if(!logs.length)h+=`<div class="empty"><div style="font-size:14px">No prices logged yet</div></div>`;
   logs.forEach(l=>{
-    const s=sig(l.price,bp);
+    const s=sigSmart(item,l.price);
     h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:13px;font-weight:600">${l.store}</div>
         <div style="font-size:11px;color:var(--text-muted)">${fmtD(l.date)}${l.pkg&&l.pkg>1?' · '+l.pkg+' '+item.unit+'s · $'+(l.total||l.price*l.pkg).toFixed(2)+' total':''}</div></div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:16px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</span>
         <span style="font-size:15px;font-weight:800">$${l.price.toFixed(2)}</span>
-        <button style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px;color:var(--text-hint)" onclick="event.stopPropagation();A._logMode=null;A._editLog={itemId:'${item.id}',logId:'${l.id}'};A.modal='editLog';render()">✏️</button>
+        <button style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px;color:var(--text-hint)" onclick="event.stopPropagation();A._editLog={itemId:'${item.id}',logId:'${l.id}'};A.modal='editLog';render()">✏️</button>
         <button style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px;color:var(--text-hint)" onclick="event.stopPropagation();if(confirm('Delete this entry?'))deleteLog('${item.id}','${l.id}')">🗑️</button>
       </div>
     </div>`;
@@ -434,7 +423,7 @@ function rStoresView(){
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div><div style="font-size:13px;font-weight:600">${x.item.name}</div>
             ${!isBest&&parseFloat(sav)>0.05?`<div style="font-size:11px;color:var(--green-bright);font-weight:600">💡 Save $${sav} at ${x.bestS}</div>`:''}</div>
-          <div style="display:flex;align-items:center;gap:6px"><span>${sig(x.lp,parseFloat(x.item.buy_price))==='buy'?'🟢':sig(x.lp,parseFloat(x.item.buy_price))==='high'?'🔴':'🟡'}</span><span style="font-size:14px;font-weight:700">$${x.lp.toFixed(2)}</span></div>
+          <div style="display:flex;align-items:center;gap:6px"><span>${sigSmart(x.item,x.lp)==='buy'?'🟢':sigSmart(x.item,x.lp)==='high'?'🔴':'🟡'}</span><span style="font-size:14px;font-weight:700">$${x.lp.toFixed(2)}</span></div>
         </div>
       </div>`;})}
   });
@@ -494,34 +483,30 @@ function rModal(){
     <div class="lbl">Buy price — stock up below this</div>
     <div id="m-bp-suggest" style="font-size:12px;color:var(--green);margin-bottom:6px;min-height:16px;font-weight:600"></div>
     <input class="inp" id="m-bp" type="number" step="0.01" placeholder="Type an item name above to get a suggestion" inputmode="decimal" style="margin-bottom:14px" oninput="this.dataset.touched='1'">
-    <button class="btn btn-primary" onclick="const it=addItem(document.getElementById('m-n').value,'Other',document.getElementById('m-u').value,document.getElementById('m-bp').value);A.selectedItem=it;A._logMode=null;A.modal='logPrice';render()">Add & Log Price</button>
+    <button class="btn btn-primary" onclick="const sug=suggestBuyPrice(document.getElementById('m-n').value,document.getElementById('m-u').value);const bpEl=document.getElementById('m-bp');const confident=sug.matched||bpEl.dataset.touched==='1';const it=addItem(document.getElementById('m-n').value,'Other',document.getElementById('m-u').value,bpEl.value,confident);A.selectedItem=it;A._dealType=null;A.modal='logPrice';render()">Add & Log Price</button>
   </div></div>`;
 
   if(A.modal==='logPrice'&&A.selectedItem){
     const item=A.selectedItem,best=getBest(item.id);
-    const isDirectUnit=item.unit==='lb'||item.unit==='oz';
-    const mode=A._logMode==='package'?'package':'perUnit';
+    const deal=A._dealType||'regular';
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${item.unit}</div>
       ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${item.unit} at ${best.store}</div>`:''}
-      ${isDirectUnit?`<div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn ${mode==='perUnit'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._logMode='perUnit';render()">Tag shows price/${item.unit}</button>
-        <button class="btn ${mode==='package'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._logMode='package';render()">Tag shows total for package</button>
-      </div>`:''}
-      <div class="lbl">${
-  isDirectUnit&&mode==='perUnit'?`What is the price per ${item.unit} on the tag?`:
-  isDirectUnit&&mode==='package'?'What is the total price for the package?':
-  'What is the total price on the tag?'
-}</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button class="btn ${deal==='regular'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='regular';render()">Regular</button>
+        <button class="btn ${deal==='markdown'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='markdown';render()">Marked Down</button>
+        <button class="btn ${deal==='bogo'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='bogo';render()">BOGO</button>
+      </div>
+      ${deal==='bogo'?`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.4">Enter the total you paid and how many you walked out with — both items combined.</div>`:''}
+      <div class="lbl">What is the total price on the tag?</div>
       <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU('${item.unit}')">
       <div class="lbl" style="margin-top:12px">${
-  isDirectUnit&&mode==='perUnit'?`How many ${item.unit}s are you buying? (optional)`:
-  isDirectUnit&&mode==='package'?`How many ${item.unit}s in the package?`:
+  item.unit==='lb'||item.unit==='oz'?`How many ${item.unit}s${deal==='bogo'?' total':''}?`:
   item.unit==='gallon'?'How many gallons?':
   item.unit==='dozen'?'How many dozen?':
   item.unit==='loaf'?'How many loaves?':
-  'How many are in this package?'
+  'How many are in this package'+(deal==='bogo'?', total':'')+'?'
 }</div>
       <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-pk" type="number" step="0.01" value="1" inputmode="decimal" oninput="calcU('${item.unit}')">
       <div id="uc" style="text-align:center;font-size:18px;font-weight:800;color:var(--green);margin:12px 0;min-height:28px"></div>
@@ -532,7 +517,7 @@ function rModal(){
   if(A.modal==='result'&&A._logResult){
     const r=A._logResult,item=A.items.find(i=>i.id===r.itemId);
     if(!item){A.modal=null;return'';}
-    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sig(pu,bp),total=r.log.total||pu,pkg=r.log.pkg||1;
+    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sigSmart(item,pu),total=r.log.total||pu,pkg=r.log.pkg||1;
     const best=getBest(item.id),better=best&&best.store!==r.log.store&&best.price<pu;
     // Shrinkflation check
     const prev=getPrevAt(item.id,r.log.store,r.log.id);
@@ -578,39 +563,28 @@ function rModal(){
   if(A.modal==='editLog'&&A._editLog){
     const e=A._editLog,item=A.items.find(i=>i.id===e.itemId),l=(A.logs[e.itemId]||[]).find(x=>x.id===e.logId);
     if(!item){A.modal=null;return'';}
-    const isDirectUnit=item.unit==='lb'||item.unit==='oz';
-    const mode=A._logMode==='package'?'package':'perUnit';
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">Edit Price</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px">${item.name} at ${l.store}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${fmtD(l.date)}</div>
-      ${isDirectUnit?`<div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn ${mode==='perUnit'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._logMode='perUnit';render()">Price/${item.unit}</button>
-        <button class="btn ${mode==='package'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._logMode='package';render()">Total for package</button>
-      </div>`:''}
+      <div class="lbl">Total price</div>
+      <input class="inp" id="m-et" type="number" step="0.01" value="${(l.total||l.price).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
       <div class="lbl">${
-  isDirectUnit&&mode==='perUnit'?`Price per ${item.unit}`:
-  isDirectUnit&&mode==='package'?'Total price for the package':
-  'Total price'
-}</div>
-      <input class="inp" id="m-et" type="number" step="0.01" value="${(isDirectUnit&&mode==='perUnit'?l.price:(l.total||l.price)).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
-      <div class="lbl">${
-  isDirectUnit&&mode==='perUnit'?`How many ${item.unit}s (optional)`:
-  isDirectUnit&&mode==='package'?`How many ${item.unit}s in the package?`:
+  item.unit==='lb'||item.unit==='oz'?`How many ${item.unit}s?`:
   item.unit==='gallon'?'How many gallons?':
   item.unit==='dozen'?'How many dozen?':
   item.unit==='loaf'?'How many loaves?':
   'How many are in this package?'
 }</div>
       <input class="inp" id="m-ek" type="number" step="0.01" value="${l.pkg||1}" inputmode="decimal" style="margin-bottom:14px">
-      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek').value);A.modal=null;A._editLog=null;A._logMode=null;">Save Changes</button>
+      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek').value);A.modal=null;A._editLog=null;">Save Changes</button>
       <button style="display:block;width:100%;margin-top:8px;background:none;border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${e.itemId}','${l.id}');A.modal=null;A._editLog=null;">Delete This Entry</button>
     </div></div>`;
   }
   return'';
 }
 
-function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(!u)return;const isDirectUnit=unit==='lb'||unit==='oz';const mode=A._logMode==='package'?'package':'perUnit';if(isDirectUnit&&mode==='perUnit'){u.textContent=(p>0&&k>1)?'= $'+(p*k).toFixed(2)+' total for '+k+' '+unit+'s':'';}else if(isDirectUnit&&mode==='package'){u.textContent=(p>0&&k>0)?'= $'+(p/k).toFixed(2)+' per '+unit:'';}else{if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}}
+function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(!u)return;if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}
 
 load();render();
 
