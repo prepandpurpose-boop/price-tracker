@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Price Tracker">
 <title>Price Tracker — Prep & Purpose</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -151,8 +151,8 @@ function updateSuggestedPrice(){
   if(bpInput&&!bpInput.dataset.touched)bpInput.value=sug.price.toFixed(2);
 }
 
-function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState}));}
-function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=d.items||[];A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;if(A.userState)A.page='store_select';}}catch(e){}}
+function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState,seenHowTo:A.seenHowTo||false}));}
+function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=d.items||[];A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;A.seenHowTo=d.seenHowTo||false;if(A.userState)A.page=A.seenHowTo?'store_select':'howto_onboarding';}}catch(e){}}
 
 function recalcLearnedBuyPrice(itemId){
   const logs=A.logs[itemId]||[];
@@ -241,6 +241,7 @@ function render(){
   const app=document.getElementById('app');
   let h='';
   if(A.page==='welcome')h=rWelcome();
+  else if(A.page==='howto_onboarding')h=rHowToOnboarding();
   else if(A.page==='store_select')h=rHdr('main')+rStoreSelect()+rNav();
   else if(A.page==='shopping')h=rHdr('shop')+rShopping()+rNav();
   else if(A.page==='detail')h=rHdr('detail')+rDetail()+rNav();
@@ -254,7 +255,7 @@ function rWelcome(){
   let opts=STATE_LIST.map(s=>`<option value="${s}">${s}</option>`).join('');
   return`<div style="min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 24px;text-align:center">
     <img src="${LOGO}" class="logo-lg" alt="Prep & Purpose">
-    <div style="font-size:26px;font-weight:800;color:var(--green);margin-bottom:4px">Price Tracker</div>
+    <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:800;color:var(--green);margin-bottom:6px">Price Tracker</div>
     <div style="font-size:12px;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px">Prep & Purpose</div>
     <div style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:24px;max-width:320px;font-weight:500">Know your prices.<br>Stop overpaying.<br>See the light — green, yellow, or red.</div>
     <div style="text-align:left;max-width:320px;margin-bottom:24px">
@@ -265,9 +266,9 @@ function rWelcome(){
     <div style="width:100%;max-width:320px">
       <div class="lbl" style="text-align:left">What state do you live in?</div>
       <select class="inp" id="w-state" style="margin-bottom:20px"><option value="">Select your state</option>${opts}</select>
-      <button class="btn btn-primary" onclick="const s=document.getElementById('w-state').value;if(!s)return toast('Pick your state');A.userState=s;A.page='store_select';save();render()">Get Started</button>
+      <button class="btn btn-primary" onclick="const s=document.getElementById('w-state').value;if(!s)return toast('Pick your state');A.userState=s;A.page='howto_onboarding';save();render()">Get Started</button>
     </div>
-    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free — no account needed. Data saves on this device.<br>📱 Add to your home screen for quick access.</div>
+    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free — no account needed. Data saves on this device.</div>
   </div>`;
 }
 
@@ -430,40 +431,67 @@ function rStoresView(){
   h+=`</div>`;return h;
 }
 
-function rMore(){
-  return`<div class="cnt" style="padding-top:16px">
-    <div style="font-size:18px;font-weight:800;margin-bottom:16px">More</div>
+function rHowToOnboarding(){
+  return`<div class="cnt" style="padding-top:24px;padding-bottom:32px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--red);color:white;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">?</div>
+      <div style="font-size:20px;font-weight:800;color:var(--green)">How Price Tracker Works</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Read this once — it only takes a minute</div>
+    </div>
     <div class="help-card">
-      <div style="font-size:15px;font-weight:800;margin-bottom:10px">How It Works</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
         <strong>1. Add your stores</strong> — tap the 🛒 Shop tab at the bottom, then tap "Add New Store." Type the store name and you are ready to go.<br><br>
         <strong>2. Pick a store</strong> when you arrive.<br><br>
-        <strong>3. Tap an item</strong> — enter the total price on the tag and how many are in the package. The app calculates the price per unit for you. No math needed.<br><br>
+        <strong>3. Tap an item</strong> — pick Regular, Marked Down, or BOGO if it applies, then enter the total price on the tag and how many are in the package. The app calculates the price per unit for you. No math needed. For BOGO, "how many" means both items combined.<br><br>
         <strong>4. See the light:</strong><br>
         🟢 <strong>Green</strong> = good deal, stock up<br>
         🟡 <strong>Yellow</strong> = normal price, buy if you need it<br>
         🔴 <strong>Red</strong> = too high, skip if you can<br><br>
         <strong>5. Compare stores.</strong> The app tells you if another store has a better price.<br><br>
-        <strong>About sale prices:</strong> Log every price, including sales. The app learns the cycle and shows you when deals hit.<br><br>
-        <strong>About shrinkflation:</strong> The app tracks how many items are in each package. If the count shrinks but the price stays the same, it flags it — you are paying more per unit even though the price tag looks the same. The app catches this automatically because you enter the package count each time.<br><br>
-        <strong>Your buy price</strong> is the target. Green means at or below it. It starts based on your state's average prices. Adjust it anytime — tap an item, tap Edit Buy Price.<br><br>
-        <strong>Editing and deleting:</strong> Made a mistake? Tap any item to see its history. Use the ✏️ to edit or 🗑️ to delete any entry.
+        <strong>Adding a new item:</strong> Type the name and the app suggests a buy price automatically — no guessing. It matches against common items and adjusts for your state. If it doesn't recognize the item, it gives a reasonable starting estimate instead, clearly marked. You can always type over the suggestion if you know better.<br><br>
+        <strong>New items start cautious:</strong> Until an item has been logged 5 times, it can only ever show green or yellow — never red. The app won't call something overpriced until it actually has enough of your real data to know that for sure.<br><br>
+        <strong>The app learns your prices:</strong> Once an item has 5 or more logged prices, the buy target switches from a generic estimate to the average of what you've actually paid — dropping the highest and lowest log first, so one typo or one splurge purchase can't throw it off.<br><br>
+        <strong>About sale prices:</strong> Log every price, including sales — tag it Marked Down or BOGO so your history stays accurate.<br><br>
+        <strong>About shrinkflation:</strong> The app tracks how many items are in each package. If the count shrinks but the price stays the same, it flags it.<br><br>
+        <strong>Editing, deleting, and your buy price:</strong> Tap the ✏️ pencil next to any item to open its full history. Edit the buy price, rename the item, edit or delete any past entry, or delete the item entirely.
       </div>
     </div>
-    <div class="help-card" style="margin-top:12px">
-      <div style="font-size:15px;font-weight:800;margin-bottom:8px">📱 Add to Home Screen</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>iPhone:</strong> Tap share → Add to Home Screen<br><strong>Android:</strong> Tap menu → Add to Home Screen</div>
+    <button class="btn btn-primary btn-full" style="margin-top:16px;padding:14px;font-size:15px" onclick="A.seenHowTo=true;A.page='store_select';save();render()">Got it — Get Started →</button>
+  </div>`;
+}
+function rMore(){
+  return`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:16px">How To Use</div>
+    <div class="help-card">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px">How It Works</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+        <strong>1. Add your stores</strong> — tap the 🛒 Shop tab at the bottom, then tap "Add New Store." Type the store name and you are ready to go.<br><br>
+        <strong>2. Pick a store</strong> when you arrive.<br><br>
+        <strong>3. Tap an item</strong> — pick Regular, Marked Down, or BOGO if it applies, then enter the total price on the tag and how many are in the package. The app calculates the price per unit for you. No math needed. For BOGO, "how many" means both items combined.<br><br>
+        <strong>4. See the light:</strong><br>
+        🟢 <strong>Green</strong> = good deal, stock up<br>
+        🟡 <strong>Yellow</strong> = normal price, buy if you need it<br>
+        🔴 <strong>Red</strong> = too high, skip if you can<br><br>
+        <strong>5. Compare stores.</strong> The app tells you if another store has a better price.<br><br>
+        <strong>Adding a new item:</strong> Type the name and the app suggests a buy price automatically — no guessing. It matches against common items and adjusts for your state. If it doesn't recognize the item, it gives a reasonable starting estimate instead, clearly marked. You can always type over the suggestion if you know better.<br><br>
+        <strong>New items start cautious:</strong> Until an item has been logged 5 times, it can only ever show green or yellow — never red. The app won't call something overpriced until it actually has enough of your real data to know that for sure.<br><br>
+        <strong>The app learns your prices:</strong> Once an item has 5 or more logged prices, the buy target switches from a generic estimate to the average of what you've actually paid — dropping the highest and lowest log first, so one typo or one splurge purchase can't throw it off. From then on it keeps adjusting as you log more.<br><br>
+        <strong>About sale prices:</strong> Log every price, including sales — tag it Marked Down or BOGO so your history stays accurate.<br><br>
+        <strong>About shrinkflation:</strong> The app tracks how many items are in each package. If the count shrinks but the price stays the same, it flags it — you are paying more per unit even though the price tag looks the same.<br><br>
+        <strong>Editing, deleting, and your buy price:</strong> Tap the ✏️ pencil next to any item to open its full history. From there you can edit the buy price, rename the item, edit or delete any past entry, or delete the item entirely.
+      </div>
     </div>
-
     <div style="text-align:center;padding:24px 0;font-size:11px;color:var(--text-hint)">Steward what you have. Serve where you are.</div>
   </div>`;
 }
 
 function rNav(){
   return`<div class="nav">
+    <button class="nav-btn ${A.page==='more'?'active':''}" onclick="A.page='more';render()">
+      <span style="width:20px;height:20px;border-radius:50%;background:var(--red);color:white;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">?</span>How To
+    </button>
     <button class="nav-btn ${A.page==='store_select'||A.page==='shopping'?'active':''}" onclick="A.page=A.activeStore?'shopping':'store_select';A.search='';render()"><span class="nav-i">🛒</span>Shop</button>
     <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()"><span class="nav-i">🏪</span>Stores</button>
-    <button class="nav-btn ${A.page==='more'?'active':''}" onclick="A.page='more';render()"><span class="nav-i">ℹ️</span>More</button>
   </div>`;
 }
 
