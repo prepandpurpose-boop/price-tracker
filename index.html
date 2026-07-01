@@ -9,7 +9,7 @@
 <title>Price Tracker — Prep & Purpose</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <style>
-:root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
+:root{--green:#2d5016;--green-mid:#4a7c28;--green-bright:#2a8020;--green-light:#e8f0e0;--cream:#faf8f3;--text:#1a1a1a;--text-muted:#6b6b6b;--text-hint:#999;--border:#e5e2db;--red:#c44;--red-light:#fef0f0;--yellow:#b8860b;--yellow-light:#fdf8ed;--orange:#c45e00;--orange-light:#fff3e8;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 input,select,button{font-family:inherit}
@@ -32,7 +32,7 @@ button{cursor:pointer}
 .btn-outline{background:white;color:var(--green);border:1px solid var(--green)}
 .btn-sm{padding:8px 14px;font-size:12px;width:auto;border-radius:8px}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:200}
-.modal-sheet{background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px}
+.modal-sheet{background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:92dvh;overflow-y:auto}
 .modal-title{font-size:17px;font-weight:800;margin-bottom:16px}
 .store-btn{width:100%;padding:16px;background:white;border:1px solid var(--border);border-radius:var(--radius);font-size:16px;font-weight:700;text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:12px}
 .store-btn-add{border-style:dashed;color:var(--green);font-weight:600}
@@ -51,13 +51,19 @@ button{cursor:pointer}
 .help-card{background:white;border-radius:var(--radius);padding:16px;border:1px solid var(--border)}
 .sec-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
 .sig{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.deal-tabs{display:flex;gap:6px;margin-bottom:12px}
+.deal-tab{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:white;font-size:12px;font-weight:700;color:var(--text-muted);text-align:center}
+.deal-tab.active{background:var(--green);color:white;border-color:var(--green)}
+.exp-wrap{background:var(--green-light);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);margin-top:-9px;margin-bottom:8px;overflow:hidden}
+.exp-row{padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.05)}
+.exp-row:last-child{border-bottom:none}
 @media(max-width:400px){.cnt{padding:0 12px 110px}.hdr{padding:12px 14px}}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
 <script>
-const LOGO='data:image/png;base64,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';
+const LOGO='data:image/avif;base64,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';
 
 // State grocery cost multipliers (1.00 = national average)
 const STATES={
@@ -75,150 +81,278 @@ const STATES={
 };
 const STATE_LIST=Object.keys(STATES).sort();
 
-const A={page:'welcome',activeStore:null,items:[],logs:{},stores:[],search:'',selectedItem:null,expandedStore:null,modal:null,_logResult:null,userState:null};
-const UNITS=['lb','oz','gallon','dozen','count','loaf'];
+const A={page:'welcome',activeStore:null,items:[],logs:{},stores:[],search:'',selectedItem:null,expandedStore:null,modal:null,_logResult:null,userState:null,_dealMode:'plain'};
+const UNITS=['lb','oz','gallon','dozen','count','loaf','package'];
+
+// mode:'unit' = price per lb off the shelf sign. mode:'package' = total price on the package.
 const STARTERS=[
-{name:'Pork Butt',cat:'Protein',unit:'lb',bp:3.49},
-{name:'Chicken Thighs (bone-in)',cat:'Protein',unit:'lb',bp:2.99},
-{name:'Chicken Breasts',cat:'Protein',unit:'lb',bp:4.17},
-{name:'Ground Beef',cat:'Protein',unit:'lb',bp:6.75},
-{name:'Ground Turkey',cat:'Protein',unit:'lb',bp:4.59},
-{name:'Whole Chicken',cat:'Protein',unit:'lb',bp:1.89},
-{name:'Bacon',cat:'Protein',unit:'lb',bp:6.71},
-{name:'Breakfast Sausage',cat:'Protein',unit:'lb',bp:4.59},
-{name:'Salmon (frozen)',cat:'Protein',unit:'lb',bp:8.99},
-{name:'Turkey (whole)',cat:'Protein',unit:'lb',bp:1.59},
-{name:'Ham',cat:'Protein',unit:'lb',bp:4.29},
-{name:'Eggs',cat:'Dairy',unit:'dozen',bp:2.25},
-{name:'Sweet Potatoes',cat:'Produce',unit:'lb',bp:1.29},
-{name:'Potatoes',cat:'Produce',unit:'lb',bp:0.99},
-{name:'Onions',cat:'Produce',unit:'lb',bp:1.09},
-{name:'Carrots',cat:'Produce',unit:'lb',bp:1.19},
-{name:'Bananas',cat:'Produce',unit:'lb',bp:0.65},
-{name:'Butter',cat:'Dairy',unit:'lb',bp:4.89},
-{name:'Milk',cat:'Dairy',unit:'gallon',bp:4.05},
-{name:'Cheese (block)',cat:'Dairy',unit:'lb',bp:5.89},
-{name:'Flour',cat:'Pantry',unit:'lb',bp:0.69},
-{name:'Sugar',cat:'Pantry',unit:'lb',bp:0.79},
-{name:'Rice',cat:'Pantry',unit:'lb',bp:0.89},
-{name:'Oats',cat:'Pantry',unit:'lb',bp:0.49},
-{name:'Pasta',cat:'Pantry',unit:'count',bp:1.69},
-{name:'Black Beans',cat:'Canned',unit:'count',bp:1.19},
-{name:'Pinto Beans',cat:'Canned',unit:'count',bp:1.19},
-{name:'Diced Tomatoes',cat:'Canned',unit:'count',bp:1.29},
-{name:'Corn (canned)',cat:'Canned',unit:'count',bp:1.09},
-{name:'Tomato Sauce',cat:'Canned',unit:'count',bp:0.79},
-{name:'Tuna',cat:'Canned',unit:'count',bp:1.79},
-{name:'Toilet Paper',cat:'Household',unit:'count',bp:0.95},
-{name:'Paper Towels',cat:'Household',unit:'count',bp:1.69},
-{name:'Aluminum Foil',cat:'Household',unit:'count',bp:4.49},
-{name:'Plastic Wrap',cat:'Household',unit:'count',bp:3.69},
-{name:'Ziplock Bags (gallon)',cat:'Household',unit:'count',bp:5.29},
-{name:'Ziplock Bags (quart)',cat:'Household',unit:'count',bp:4.69},
-{name:'Trash Bags',cat:'Household',unit:'count',bp:8.99},
-{name:'Dish Soap',cat:'Household',unit:'count',bp:3.49},
-{name:'Laundry Detergent',cat:'Household',unit:'count',bp:14.99},
-{name:'Parchment Paper',cat:'Household',unit:'count',bp:4.49},
+// ── Protein — all priced per lb at the meat counter ──
+{name:'Pork Butt',unit:'lb',mode:'unit',bp:3.29},
+{name:'Chicken Thighs (bone-in)',unit:'lb',mode:'unit',bp:2.79},
+{name:'Chicken Breasts',unit:'lb',mode:'unit',bp:4.29},
+{name:'Ground Beef',unit:'lb',mode:'unit',bp:6.49},
+{name:'Ground Turkey',unit:'lb',mode:'unit',bp:4.49},
+{name:'Whole Chicken',unit:'lb',mode:'unit',bp:1.99},
+{name:'Bacon',unit:'package',mode:'package',bp:6.99},
+{name:'Breakfast Sausage',unit:'package',mode:'package',bp:4.99},
+{name:'Salmon (frozen)',unit:'package',mode:'package',bp:9.99},
+{name:'Turkey (whole)',unit:'lb',mode:'unit',bp:1.49},
+{name:'Ham',unit:'package',mode:'package',bp:7.99},
+{name:'Canned Chicken',unit:'package',mode:'package',bp:2.49},
+// ── Produce — bags have total prices ──
+{name:'Bananas',unit:'lb',mode:'unit',bp:0.69},
+{name:'Potatoes (5 lb bag)',unit:'package',mode:'package',bp:4.49},
+{name:'Sweet Potatoes (3 lb bag)',unit:'package',mode:'package',bp:3.99},
+{name:'Onions (3 lb bag)',unit:'package',mode:'package',bp:3.29},
+{name:'Carrots (1 lb bag)',unit:'package',mode:'package',bp:1.29},
+// ── Dairy — all sold as packages with a total price ──
+{name:'Eggs',unit:'package',mode:'package',bp:3.79},
+{name:'Milk (gallon)',unit:'package',mode:'package',bp:4.09},
+{name:'Butter (1 lb)',unit:'package',mode:'package',bp:4.99},
+{name:'Cheese Block (8 oz)',unit:'package',mode:'package',bp:3.49},
+{name:'Shredded Cheese (8 oz)',unit:'package',mode:'package',bp:3.49},
+{name:'Cream Cheese (8 oz)',unit:'package',mode:'package',bp:2.99},
+{name:'Yogurt (32 oz)',unit:'package',mode:'package',bp:4.99},
+{name:'Sour Cream (16 oz)',unit:'package',mode:'package',bp:2.49},
+{name:'Orange Juice (52 oz)',unit:'package',mode:'package',bp:4.49},
+// ── Pantry — all sold by the bag or box ──
+{name:'Bread',unit:'package',mode:'package',bp:3.49},
+{name:'Flour (5 lb)',unit:'package',mode:'package',bp:2.99},
+{name:'Sugar (4 lb)',unit:'package',mode:'package',bp:3.49},
+{name:'Rice (2 lb)',unit:'package',mode:'package',bp:2.49},
+{name:'Oats (42 oz)',unit:'package',mode:'package',bp:3.99},
+{name:'Pasta',unit:'package',mode:'package',bp:1.99},
+{name:'Peanut Butter',unit:'package',mode:'package',bp:3.99},
+{name:'Cooking Oil',unit:'package',mode:'package',bp:9.99},
+{name:'Chicken Broth',unit:'package',mode:'package',bp:3.49},
+// ── Canned ──
+{name:'Black Beans',unit:'package',mode:'package',bp:1.09},
+{name:'Pinto Beans',unit:'package',mode:'package',bp:1.09},
+{name:'Diced Tomatoes',unit:'package',mode:'package',bp:1.19},
+{name:'Corn (canned)',unit:'package',mode:'package',bp:0.99},
+{name:'Tomato Sauce',unit:'package',mode:'package',bp:0.69},
+{name:'Tuna',unit:'package',mode:'package',bp:1.49},
+// ── Household ──
+{name:'Toilet Paper',unit:'package',mode:'package',bp:7.99},
+{name:'Paper Towels',unit:'package',mode:'package',bp:9.99},
+{name:'Aluminum Foil',unit:'package',mode:'package',bp:4.29},
+{name:'Plastic Wrap',unit:'package',mode:'package',bp:3.49},
+{name:'Ziplock Bags (gallon)',unit:'package',mode:'package',bp:4.99},
+{name:'Ziplock Bags (quart)',unit:'package',mode:'package',bp:4.49},
+{name:'Trash Bags',unit:'package',mode:'package',bp:8.49},
+{name:'Dish Soap',unit:'package',mode:'package',bp:3.29},
+{name:'Laundry Detergent',unit:'package',mode:'package',bp:10.99},
+{name:'Parchment Paper',unit:'package',mode:'package',bp:4.29},
 ];
 
 function adjustedBP(baseBP){return A.userState?+(baseBP*(STATES[A.userState]||1)).toFixed(2):baseBP;}
 
-function suggestBuyPrice(name,unit){
-  if(!name||!name.trim())return{price:0,source:null,matched:false};
-  const n=name.toLowerCase().trim();
-  let best=null,bestScore=0;
-  STARTERS.forEach(s=>{
-    const sn=s.name.toLowerCase();
-    const nWords=n.split(/\s+/).filter(w=>w.length>2);
-    const sWords=sn.replace(/[()]/g,'').split(/\s+/).filter(w=>w.length>2);
-    let score=0;
-    nWords.forEach(w=>{if(sWords.some(sw=>sw.includes(w)||w.includes(sw)))score++;});
-    if(n.includes(sn)||sn.includes(n))score+=2;
-    if(score>bestScore){bestScore=score;best=s;}
-  });
-  if(best&&bestScore>0)return{price:adjustedBP(best.bp),source:best.name,matched:true};
-  const genericByUnit={lb:3.49,oz:1.99,gallon:3.99,dozen:2.99,count:1.99,loaf:3.49};
-  return{price:adjustedBP(genericByUnit[unit]||2.99),source:null,matched:false};
+// Common sizes and their buy price targets for package items
+// Format: { 'size label': base_price }
+const SIZE_PRICES={
+  'Eggs':{'12 ct':3.79,'18 ct':5.49,'24 ct':6.99},
+  'Milk (gallon)':{'1 gallon':4.09,'half gallon':2.49},
+  'Butter (1 lb)':{'1 lb (4 sticks)':4.99,'2 lbs':8.99},
+  'Cheese Block (8 oz)':{'8 oz':3.49,'16 oz':5.99,'32 oz':10.99},
+  'Shredded Cheese (8 oz)':{'8 oz':3.49,'16 oz':5.99},
+  'Cream Cheese (8 oz)':{'8 oz':2.99,'16 oz':4.99},
+  'Yogurt (32 oz)':{'32 oz':4.99,'48 oz':6.99},
+  'Sour Cream (16 oz)':{'16 oz':2.49,'24 oz':3.49},
+  'Orange Juice (52 oz)':{'52 oz':4.49,'89 oz':6.99},
+  'Bacon':{'12 oz':6.99,'16 oz':7.99,'24 oz':10.99},
+  'Breakfast Sausage':{'12 oz':4.49,'16 oz':4.99},
+  'Ham':{'1 lb':4.99,'2 lb':7.99,'3 lb':10.99},
+  'Salmon (frozen)':{'1 lb':9.99,'2 lb':16.99},
+  'Canned Chicken':{'5 oz':2.49,'12.5 oz':4.49},
+  'Potatoes (5 lb bag)':{'3 lb':3.49,'5 lb':4.49,'10 lb':7.99},
+  'Sweet Potatoes (3 lb bag)':{'3 lb':3.99,'5 lb':5.99},
+  'Onions (3 lb bag)':{'2 lb':2.49,'3 lb':3.29,'5 lb':4.99},
+  'Carrots (1 lb bag)':{'1 lb':1.29,'2 lb':2.29},
+  'Bread':{'20 oz':3.49,'24 oz':4.49},
+  'Pasta':{'12 oz':1.49,'16 oz':1.99,'32 oz':3.49},
+  'Peanut Butter':{'16 oz':3.99,'28 oz':5.99,'40 oz':7.99},
+  'Cooking Oil':{'16 oz':5.99,'32 oz':7.99,'48 oz':9.99,'750 ml':9.99},
+  'Chicken Broth':{'32 oz':3.49,'48 oz':4.99},
+  'Rice (2 lb)':{'2 lb':2.49,'5 lb':5.49,'10 lb':9.99},
+  'Flour (5 lb)':{'5 lb':2.99,'10 lb':5.49},
+  'Sugar (4 lb)':{'4 lb':3.49,'10 lb':7.99},
+  'Oats (42 oz)':{'18 oz':3.49,'42 oz':3.99},
+  'Toilet Paper':{'6 rolls':5.99,'12 rolls':7.99,'24 rolls':14.99},
+  'Paper Towels':{'4 rolls':5.99,'6 rolls':7.99,'12 rolls':13.99},
+  'Trash Bags':{'20 ct':6.99,'30 ct':8.49,'45 ct':11.99},
+  'Laundry Detergent':{'32 oz':8.99,'64 oz':10.99,'128 oz':14.99},
+  'Ziplock Bags (gallon)':{'15 ct':4.49,'28 ct':6.99},
+  'Ziplock Bags (quart)':{'20 ct':3.99,'40 ct':5.99},
+  'Dish Soap':{'12 oz':3.29,'19 oz':4.49},
+};
+
+function getSizes(starterName){return SIZE_PRICES[starterName]||null;}
+
+function sizeAdjustedBP(starterName,sizeLabel,baseBP){
+  const sizes=getSizes(starterName);
+  if(sizes&&sizes[sizeLabel])return adjustedBP(sizes[sizeLabel]);
+  return adjustedBP(baseBP);
 }
-function updateSuggestedPrice(){
-  const name=document.getElementById('m-n')?.value||'';
-  const unit=document.getElementById('m-u')?.value||'lb';
-  const bpInput=document.getElementById('m-bp');
-  const suggestEl=document.getElementById('m-bp-suggest');
-  if(!name.trim()){if(suggestEl)suggestEl.textContent='';return;}
-  const sug=suggestBuyPrice(name,unit);
-  if(suggestEl)suggestEl.textContent=sug.matched?`💡 Suggested $${sug.price.toFixed(2)} — based on ${sug.source}`:`💡 Estimated $${sug.price.toFixed(2)} — adjust if you know better`;
-  if(bpInput&&!bpInput.dataset.touched)bpInput.value=sug.price.toFixed(2);
+
+// Learning: after 5+ logs, check if real average differs from target by >10% and prompt update
+function checkLearning(itemId){
+  const item=A.items.find(i=>i.id===itemId);
+  if(!item)return;
+  const logs=A.logs[itemId]||[];
+  if(logs.length<5)return; // need at least 5 data points
+  const avg=+(logs.reduce((s,l)=>s+l.price,0)/logs.length).toFixed(2);
+  const bp=parseFloat(item.buy_price);
+  const diff=Math.abs(avg-bp)/bp;
+  // Estimated items never had a real target to begin with — always offer to set the real one once she has 5 logs
+  if(item.isEstimated||diff>0.10){
+    A._learnSuggest={itemId,avg,current:bp};
+    // show after a short delay so result screen renders first
+    setTimeout(()=>{if(A.modal==='result'){A._learnPending=true;}},100);
+  }
+}
+
+function guessItem(name){
+  const n=(name||'').toLowerCase();
+  const hasSizeOz=/\d+\s*oz/.test(n);
+  const has=arr=>arr.some(w=>n.includes(w));
+  // oils — check before starter lookup so premium oil names don't hit generic starters
+  if(has(['olive oil','avocado oil','coconut oil','vegetable oil','canola oil','cooking oil','oil']))
+    return{unit:'package',mode:'package',bp:adjustedBP(9.99)};
+  // exact match to a starter
+  const hit=STARTERS.find(s=>n&&(s.name.toLowerCase().includes(n)||n.includes(s.name.toLowerCase())));
+  if(hit&&!hasSizeOz)return{unit:hit.unit,mode:hit.mode,bp:adjustedBP(hit.bp)};
+  // specific package sizes — treat as package
+  if(hasSizeOz)return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // by-weight meat/produce items
+  if(has(['beef','pork','chicken','turkey','steak','roast','meat','sausage','bacon','ham','fish','salmon','shrimp','potato','onion','carrot','banana','apple','produce','fruit','veggie','vegetable']))
+    return{unit:'lb',mode:'unit',bp:adjustedBP(2.99)};
+  // pantry/dry goods by weight
+  if(has(['flour','sugar','rice','oats','grain','lentil','dried']))
+    return{unit:'lb',mode:'unit',bp:adjustedBP(1.49)};
+  // dairy packages
+  if(has(['butter','cheese','cream cheese','yogurt','milk','sour cream','creamer','half and half']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // beverages
+  if(has(['juice','soda','water','drink','beverage','broth','stock','kombucha','tea','coffee']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.99)};
+  // bread/bakery
+  if(has(['bread','loaf','bun','roll','tortilla','bagel','muffin','croissant']))
+    return{unit:'package',mode:'package',bp:adjustedBP(4.49)};
+  // pantry packages
+  if(has(['pasta','bean','beans','tomato','corn','tuna','soup','sauce','peanut butter','nut butter','jam','jelly','syrup','honey','vinegar','mayo','mustard','ketchup','dressing']))
+    return{unit:'package',mode:'package',bp:adjustedBP(3.49)};
+  // household/cleaning
+  if(has(['paper','towel','tissue','napkin','foil','wrap','bag','trash','soap','detergent','cleaner','sponge','bleach']))
+    return{unit:'package',mode:'package',bp:adjustedBP(6.99)};
+  // generic package fallback
+  if(has(['box','pack','bottle','jar','can','container']))
+    return{unit:'package',mode:'package',bp:adjustedBP(3.99)};
+  // default: by the pound
+  return{unit:'lb',mode:'unit',bp:adjustedBP(2.49)};
 }
 
 function save(){localStorage.setItem('pt2',JSON.stringify({items:A.items,logs:A.logs,stores:A.stores,userState:A.userState,seenHowTo:A.seenHowTo||false}));}
-function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=d.items||[];A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;A.seenHowTo=d.seenHowTo||false;if(A.userState)A.page=A.seenHowTo?'store_select':'howto_onboarding';}}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('pt2'));if(d){A.items=(d.items||[]).map(migrateItem);A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||null;A.seenHowTo=d.seenHowTo||false;A.seenIntro=d.seenIntro||false;if(A.userState)A.page=A.seenHowTo?'store_select':'howto_onboarding';}}catch(e){}}
 
-function recalcLearnedBuyPrice(itemId){
-  const logs=A.logs[itemId]||[];
-  if(logs.length<5)return;// need at least 5 real data points before learning kicks in
-  const item=A.items.find(i=>i.id===itemId);
-  if(!item)return;
-  const prices=logs.map(l=>l.price).filter(p=>p>0).sort((a,b)=>a-b);
-  if(prices.length<5)return;
-  // Trimmed mean — drop the single highest and single lowest so one typo
-  // or one one-off splurge purchase can't skew the learned price
-  const trimmed=prices.slice(1,-1);
-  const avg=trimmed.reduce((s,p)=>s+p,0)/trimmed.length;
-  item.buy_price=+avg.toFixed(2);
+// Backfill mode on items saved before this version
+function migrateItem(it){
+  if(!it.mode){
+    const st=STARTERS.find(s=>s.name.toLowerCase()===(it.name||'').toLowerCase());
+    if(st){
+      it.mode=st.mode;
+      it.unit=st.unit;
+      // always reset buy price to current starter target when mode changes
+      it.buy_price=adjustedBP(st.bp);
+    }
+    else if(it.unit==='count'||it.unit==='oz'||it.unit==='dozen'||it.unit==='gallon'||it.unit==='loaf'){
+      // old non-lb unit items were always package-style
+      it.mode='package';it.unit='package';
+      if(parseFloat(it.buy_price)<2)it.buy_price=+(parseFloat(it.buy_price||1)*6).toFixed(2);
+    }
+    else it.mode='unit';
+  }
+  // fix any surviving oz/dozen/gallon/loaf unit-mode items to show correctly
+  if(it.mode==='unit'&&it.unit!=='lb'){it.mode='package';it.unit='package';}
+  return it;
 }
-function addItem(name,cat,unit,bp,confident){const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);const item={id,name,category:cat,unit,buy_price:parseFloat(bp),confident:confident!==false};A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;}
+
+function addItem(name,unit,bp,mode,typicalSize,isEstimated){
+  const id='i_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  const item={id,name,unit,buy_price:parseFloat(bp),mode:mode||'unit',typicalSize:typicalSize||null,isEstimated:!!isEstimated};
+  A.items.push(item);A.logs[id]=[];save();render();toast(name+' added');return item;
+}
 function deleteItem(id){A.items=A.items.filter(i=>i.id!==id);delete A.logs[id];save();A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render();toast('Deleted');}
-function addLog(itemId,priceInput,qtyInput,store){
-  store=store||A.activeStore;
-  if(!store)return toast('Pick a store first');
-  const item=A.items.find(i=>i.id===itemId);
-  if(!item)return;
-  const total=parseFloat(priceInput);
-  const pkg=parseFloat(qtyInput)||1;
-  const perUnit=+(total/pkg).toFixed(2);
-  if(!perUnit||perUnit<=0)return toast('Enter the price');
-  const log={id:'l_'+Date.now(),price:perUnit,total:total,pkg:pkg,store:norm(store),date:new Date().toISOString().split('T')[0],dealType:A._dealType||'regular'};
-  if(!A.logs[itemId])A.logs[itemId]=[];
-  A.logs[itemId].unshift(log);
-  recalcLearnedBuyPrice(itemId);
-  save();
-  A._logResult={itemId,log};
-  A.modal='result';
-  A._dealType=null;
-  render();
+
+// price stored = exactly what the user typed. No division. Ever.
+// pkgQty + pkgUnit = optional shrinkflation tracking, stored separately from price.
+function addLog(itemId,price,store,pkgQty,pkgUnit){
+  const item=A.items.find(i=>i.id===itemId);if(!item)return;
+  store=store||A.activeStore;if(!store)return toast('Pick a store first');
+  price=parseFloat(price);
+  if(!price||price<=0)return toast('Enter the price');
+  const log={id:'l_'+Date.now(),price:+price.toFixed(2),total:+price.toFixed(2),store:norm(store),date:new Date().toISOString().split('T')[0]};
+  if(pkgQty&&parseFloat(pkgQty)>0){log.pkgQty=+parseFloat(pkgQty).toFixed(2);log.pkgUnit=pkgUnit||'ct';}
+  if(!A.logs[itemId])A.logs[itemId]=[];A.logs[itemId].unshift(log);
+  save();A._logResult={itemId,log};
+  checkLearning(itemId);
+  A.modal='result';render();
 }
-function editLog(itemId,logId,newTotal,newQty){
-  const logs=A.logs[itemId]||[];
-  const log=logs.find(l=>l.id===logId);
-  if(!log)return;
-  newTotal=parseFloat(newTotal);
-  const pkg=parseFloat(newQty)||1;
-  const perUnit=+(newTotal/pkg).toFixed(2);
-  if(!perUnit||perUnit<=0)return toast('Enter the price');
-  log.total=newTotal;log.pkg=pkg;log.price=perUnit;
-  recalcLearnedBuyPrice(itemId);
+function editLog(itemId,logId,newPrice,newPkgQty,newPkgUnit){
+  const logs=A.logs[itemId]||[];const log=logs.find(l=>l.id===logId);if(!log)return;
+  newPrice=parseFloat(newPrice);
+  if(!newPrice||newPrice<=0)return toast('Enter the price');
+  log.price=+newPrice.toFixed(2);log.total=+newPrice.toFixed(2);
+  if(newPkgQty&&parseFloat(newPkgQty)>0){log.pkgQty=+parseFloat(newPkgQty).toFixed(2);log.pkgUnit=newPkgUnit||'ct';}
+  else{delete log.pkgQty;delete log.pkgUnit;}
   save();render();toast('Updated');
 }
-function deleteLog(itemId,logId){A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);recalcLearnedBuyPrice(itemId);save();render();toast('Deleted');}
-function updateBP(id,bp){const it=A.items.find(i=>i.id===id);if(it){it.buy_price=parseFloat(bp);save();render();toast('Updated');}}
+function deleteLog(itemId,logId){A.logs[itemId]=(A.logs[itemId]||[]).filter(l=>l.id!==logId);save();render();toast('Deleted');}
+function updateBP(id,bp){const it=A.items.find(i=>i.id===id);if(it){it.buy_price=parseFloat(bp);it.isEstimated=false;save();render();toast('Updated');}}
 function renameItem(id,name){const it=A.items.find(i=>i.id===id);if(it&&name.trim()){it.name=name.trim();save();render();toast('Renamed');}}
 function addStore(name){name=norm(name);if(!name)return toast('Enter a store name');if(!A.stores.includes(name))A.stores.push(name);save();A.activeStore=name;A.page='shopping';A.modal=null;render();toast(name+' added');}
-function norm(s){if(!s||!s.trim())return'';return s.trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
-function sig(price,bp){if(price<=bp)return'buy';if(price<=bp*1.15)return'ok';return'high';}
-function sigSmart(item,price){
-  const bp=parseFloat(item.buy_price);
-  const logs=A.logs[item.id]||[];
-  if(item.confident===false&&logs.length<5){
-    return price<=bp?'buy':'ok';// never red while uncertain
-  }
-  return sig(price,bp);
+function deleteStore(name){
+  A.stores=A.stores.filter(s=>s!==name);
+  if(A.activeStore===name)A.activeStore=null;
+  if(A.expandedStore===name)A.expandedStore=null;
+  save();render();toast(name+' removed');
 }
+function norm(s){if(!s||!s.trim())return'';return s.trim().split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
+// escape for use inside single-quoted JS string in an inline onclick
+function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function sig(price,bp){if(price<=bp)return'buy';if(price<=bp*1.15)return'ok';return'high';}
 function getBest(id){const l=A.logs[id]||[];if(!l.length)return null;return l.reduce((b,x)=>x.price<b.price?x:b,l[0]);}
 function getLast(id,store){return(A.logs[id]||[]).filter(l=>l.store===store).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;}
 function getPrevAt(id,store,excludeId){return(A.logs[id]||[]).filter(l=>l.store===store&&l.id!==excludeId).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]||null;}
 function fmtD(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+// label for the price unit shown to user
+function priceLabel(item){return item.mode==='package'?'package':item.unit;}
+function qtyLabel(item){
+  if(item.mode==='package')return'How many in the package? (count — optional)';
+  switch(item.unit){
+    case'lb':return'How many lbs?';
+    case'oz':return'How many oz?';
+    case'gallon':return'How many gallons?';
+    case'dozen':return'How many dozen?';
+    case'loaf':return'How many loaves?';
+    default:return'How many?';
+  }
+}
 let _t;function toast(m){let e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';e.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2d5016;color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;max-width:320px;text-align:center';document.body.appendChild(e);}e.textContent=m;e.style.opacity='1';clearTimeout(_t);_t=setTimeout(()=>e.style.opacity='0',2500);}
+
+// Export — show backup text in a modal so user can copy it anywhere (Notes, email, etc.)
+// No file download needed — works on every device including iOS home screen apps.
+function exportData(){
+  A._exportText=JSON.stringify({v:2,exported:new Date().toISOString(),items:A.items,logs:A.logs,stores:A.stores,userState:A.userState},null,0);
+  A.modal='exportData';render();
+}
+function importData(text){
+  try{
+    const d=JSON.parse(text);
+    if(!d||!d.items)return toast('That does not look like a backup');
+    A.items=(d.items||[]).map(migrateItem);A.logs=d.logs||{};A.stores=d.stores||[];A.userState=d.userState||A.userState;
+    save();A.modal=null;A.page=A.userState?'store_select':'welcome';A.activeStore=null;render();toast('Backup restored');
+  }catch(e){toast('Could not read that backup');}
+}
 
 // Search with debounce
 let _sd;
@@ -247,45 +381,61 @@ function render(){
   else if(A.page==='detail')h=rHdr('detail')+rDetail()+rNav();
   else if(A.page==='stores')h=rHdr('main')+rStoresView()+rNav();
   else if(A.page==='more')h=rHdr('main')+rMore()+rNav();
+  else if(A.page==='settings')h=rHdr('settings')+rSettings()+rNav();
   app.innerHTML=h;
   if(A.modal){const d=document.createElement('div');d.innerHTML=rModal();if(d.firstElementChild)app.appendChild(d.firstElementChild);}
 }
 
 function rWelcome(){
   let opts=STATE_LIST.map(s=>`<option value="${s}">${s}</option>`).join('');
-  return`<div style="min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 24px;text-align:center">
-    <img src="${LOGO}" class="logo-lg" alt="Prep & Purpose">
-    <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:800;color:var(--green);margin-bottom:6px">Price Tracker</div>
-    <div style="font-size:12px;color:var(--green);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px">Prep & Purpose</div>
-    <div style="font-size:16px;color:var(--text);line-height:1.6;margin-bottom:24px;max-width:320px;font-weight:500">Know your prices.<br>Stop overpaying.<br>See the light — green, yellow, or red.</div>
-    <div style="text-align:left;max-width:320px;margin-bottom:24px">
-      <div style="display:flex;gap:10px;margin-bottom:14px"><span style="font-size:24px">🟢</span><div style="font-size:14px;line-height:1.5"><strong>Green = Buy it.</strong> Great price. Stock up.</div></div>
-      <div style="display:flex;gap:10px;margin-bottom:14px"><span style="font-size:24px">🟡</span><div style="font-size:14px;line-height:1.5"><strong>Yellow = OK price.</strong> Buy if you need it.</div></div>
-      <div style="display:flex;gap:10px;margin-bottom:14px"><span style="font-size:24px">🔴</span><div style="font-size:14px;line-height:1.5"><strong>Red = Too high.</strong> Skip if you can wait.</div></div>
+  return`<div style="min-height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 24px;text-align:center;background:var(--cream)">
+    <div style="margin-bottom:20px">
+      <img src="data:image/avif;base64,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" style="width:72px;height:72px;border-radius:14px;object-fit:contain;display:block;margin:0 auto" alt="">
     </div>
-    <div style="width:100%;max-width:320px">
-      <div class="lbl" style="text-align:left">What state do you live in?</div>
-      <select class="inp" id="w-state" style="margin-bottom:20px"><option value="">Select your state</option>${opts}</select>
-      <button class="btn btn-primary" onclick="const s=document.getElementById('w-state').value;if(!s)return toast('Pick your state');A.userState=s;A.page='howto_onboarding';save();render()">Get Started</button>
+    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:800;color:var(--green);margin-bottom:4px;line-height:1.1">Price Tracker</div>
+    <div style="font-size:11px;color:var(--green-mid);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px">Prep &amp; Purpose</div>
+    <div style="font-size:15px;color:var(--text-muted);line-height:1.7;margin-bottom:28px;max-width:300px">Know your prices. Stop overpaying.<br>See the light — green, yellow, or red.</div>
+    <div style="text-align:left;max-width:300px;margin-bottom:28px;width:100%">
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><span style="font-size:22px;flex-shrink:0">🟢</span><div style="font-size:14px;line-height:1.5;color:var(--text)"><strong>Green</strong> — great price, stock up</div></div>
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><span style="font-size:22px;flex-shrink:0">🟡</span><div style="font-size:14px;line-height:1.5;color:var(--text)"><strong>Yellow</strong> — normal price, buy if you need it</div></div>
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:0"><span style="font-size:22px;flex-shrink:0">🔴</span><div style="font-size:14px;line-height:1.5;color:var(--text)"><strong>Red</strong> — too high, skip if you can wait</div></div>
     </div>
-    <div style="margin-top:32px;font-size:11px;color:var(--text-hint);line-height:1.6">Free — no account needed. Data saves on this device.</div>
+    <div style="width:100%;max-width:300px">
+      <div class="lbl" style="text-align:left;margin-bottom:8px">Your state</div>
+      <select class="inp" id="w-state" style="margin-bottom:16px;font-size:15px"><option value="">Select your state</option>${opts}</select>
+      <button class="btn btn-primary" style="font-size:16px;padding:15px" onclick="const s=document.getElementById('w-state').value;if(!s)return toast('Pick your state');A.userState=s;A.page='howto_onboarding';save();render()">Get Started →</button>
+    </div>
+    <div style="margin-top:28px;font-size:11px;color:var(--text-hint);line-height:1.7">Free — no account needed · Data saves on this device</div>
   </div>`;
 }
 
 function rHdr(mode){
+  if(mode==='settings')return`<div class="hdr"><button class="hdr-back" onclick="A.page='more';render()">← Back</button><div class="hdr-title" style="font-size:14px">Settings &amp; Data</div><div></div></div>`;
   if(mode==='shop')return`<div class="hdr"><div><div class="hdr-title">🏪 ${A.activeStore}</div><div class="hdr-sub">Tap an item to log its price</div></div><button class="hdr-btn" onclick="A.activeStore=null;A.page='store_select';A.search='';render()">Switch</button></div>`;
   if(mode==='detail')return`<div class="hdr"><button class="hdr-back" onclick="A.page=A.activeStore?'shopping':'store_select';A.selectedItem=null;render()">← Back</button><div class="hdr-title" style="font-size:14px">${A.selectedItem?A.selectedItem.name:''}</div><div></div></div>`;
   return`<div class="hdr"><div style="display:flex;align-items:center;gap:10px"><img src="${LOGO}" class="logo" alt=""><div><div class="hdr-title">Price Tracker</div><div class="hdr-sub">Prep & Purpose</div></div></div></div>`;
 }
 
 function rStoreSelect(){
-  let h=`<div class="cnt" style="padding-top:16px">
-    <div class="prompt-card"><div style="font-size:22px;margin-bottom:8px">🛒</div><div style="font-size:18px;font-weight:800;margin-bottom:6px">Where are you shopping?</div><div style="font-size:13px;opacity:.85">Pick your store to start</div></div>`;
+  let h=`<div class="cnt" style="padding-top:16px">`;
+  if(!A.seenIntro){
+    h+=`<div class="help-card" style="margin-bottom:16px;border:2px solid var(--green);position:relative">
+      <button onclick="A.seenIntro=true;save();render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:18px;color:var(--text-hint);cursor:pointer;padding:4px">×</button>
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:var(--green)">👋 How This Works</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        <strong>1.</strong> Add a store, then tap an item to log the price you see on the shelf — by the pound for meat and produce, or the total package price for everything else.<br><br>
+        <strong>2.</strong> 🟢 Green means buy it. 🟡 Yellow means an ok price. 🔴 Red means skip it for now.<br><br>
+        <strong>3.</strong> Log a few prices for any item and the app learns your real numbers — no guessing needed.
+      </div>
+      <button onclick="A.seenIntro=true;save();render()" style="margin-top:12px;background:none;border:none;font-size:12px;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Got it, hide this</button>
+    </div>`;
+  }
+  h+=`<div class="prompt-card"><div style="font-size:22px;margin-bottom:8px">🛒</div><div style="font-size:18px;font-weight:800;margin-bottom:6px">Where are you shopping?</div><div style="font-size:13px;opacity:.85">Pick your store to start</div></div>`;
   A.stores.forEach(s=>{
-    h+=`<button class="store-btn" onclick="A.activeStore='${s}';A.page='shopping';A.search='';render()"><span style="font-size:22px">🏪</span><div style="font-size:15px;font-weight:700">${s}</div></button>`;
+    h+=`<button class="store-btn" onclick="A.activeStore='${esc(s)}';A.page='shopping';A.search='';render()"><span style="font-size:22px">🏪</span><div style="font-size:15px;font-weight:700">${s}</div></button>`;
   });
   h+=`<button class="store-btn store-btn-add" onclick="A.modal='addStore';render()"><span style="font-size:22px">➕</span><div>Add New Store</div></button>`;
-  if(!A.stores.length)h+=`<div class="help-card" style="margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">How it works</div><div style="font-size:13px;color:var(--text-muted);line-height:1.7"><strong>1.</strong> Add a store you shop at<br><strong>2.</strong> Tap items to add them to your list<br><strong>3.</strong> Type the total price and how many<br><strong>4.</strong> See the light — buy, ok, or too high</div></div>`;
+  if(!A.stores.length)h+=`<div class="help-card" style="margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">How it works</div><div style="font-size:13px;color:var(--text-muted);line-height:1.7"><strong>1.</strong> Add a store you shop at<br><strong>2.</strong> Tap items to add them to your list<br><strong>3.</strong> Enter the price — by the pound for meat and produce, or the total package price for paper goods<br><strong>4.</strong> See the light — buy, ok, or too high</div></div>`;
   h+=`</div>`;return h;
 }
 
@@ -301,7 +451,6 @@ function buildItemList(){
   const store=A.activeStore,q=A.search.toLowerCase();
   let h='';
 
-  // Recently logged at this store
   if(!q){
     const recent=[];const all=[];
     A.items.forEach(item=>{(A.logs[item.id]||[]).filter(l=>l.store===store).forEach(l=>all.push({...l,_id:item.id}));});
@@ -315,7 +464,6 @@ function buildItemList(){
     }
   }
 
-  // All tracked items
   const tracked=A.items.filter(i=>!q||i.name.toLowerCase().includes(q));
   const recentIds=[];if(!q){const all2=[];A.items.forEach(item=>{(A.logs[item.id]||[]).filter(l=>l.store===store).forEach(l=>all2.push({...l,_id:item.id}));});all2.sort((a,b)=>new Date(b.date)-new Date(a.date));all2.forEach(l=>{if(!recentIds.includes(l._id)&&recentIds.length<6)recentIds.push(l._id);});}
   const main=q?tracked:tracked.filter(i=>!recentIds.includes(i.id));
@@ -325,22 +473,22 @@ function buildItemList(){
     main.forEach(item=>{h+=itemCard(item,store);});
   }
 
-  // Suggested — all categories
   const unadded=STARTERS.filter(s=>!A.items.find(i=>i.name.toLowerCase()===s.name.toLowerCase())&&(!q||s.name.toLowerCase().includes(q)));
   if(unadded.length>0){
     h+=`<div class="sec-label" style="margin-top:14px">Suggested — Tap to Add</div>`;
-    const cats=[...new Set(unadded.map(s=>s.cat))];
-    cats.forEach(cat=>{
-      h+=`<div style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-left:4px">${cat}</div>`;
-      unadded.filter(s=>s.cat===cat).forEach(s=>{
-        const abp=adjustedBP(s.bp);
-        h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="const it=addItem('${s.name.replace(/'/g,"\\'")}','${s.cat}','${s.unit}',${abp});A.selectedItem=it;A.modal='logPrice';render()">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-size:14px;font-weight:600">${s.name}</div>
-            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}/${s.unit}</div><div style="font-size:9px;color:var(--text-hint)">buy target</div></div>
-          </div>
-        </div>`;
-      });
+    unadded.forEach(s=>{
+      const abp=adjustedBP(s.bp);
+      const lbl=s.mode==='package'?'/pkg':'/lb';
+      const hasSizes=!!getSizes(s.name);
+      const onclick=hasSizes
+        ? `A._pendingStarter={name:'${esc(s.name)}',unit:'${s.unit}',mode:'${s.mode}',bp:${abp},starterName:'${esc(s.name)}'};A.modal='sizeSelect';render()`
+        : `const it=addItem('${esc(s.name)}','${s.unit}',${abp},'${s.mode}',null);A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render()`;
+      h+=`<div class="card" style="cursor:pointer;padding:12px 14px;border-style:dashed" onclick="${onclick}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:600">${s.name}</div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">$${abp.toFixed(2)}${lbl}</div><div style="font-size:9px;color:var(--text-hint)">${hasSizes?'tap to pick your size':'buy target'}</div></div>
+        </div>
+      </div>`;
     });
   }
   if(!tracked.length&&!unadded.length&&q)h+=`<div class="empty"><div style="font-size:14px">No results for "${A.search}"</div></div>`;
@@ -350,23 +498,26 @@ function buildItemList(){
 
 function itemCard(item,store){
   const bp=parseFloat(item.buy_price),last=getLast(item.id,store),best=getBest(item.id);
-  const lp=last?last.price:null,s=lp?sigSmart(item,lp):null;
+  const lp=last?last.price:null,s=lp?sig(lp,bp):null;
   const better=best&&lp&&best.store!==store&&best.price<lp;
   const cls=s==='buy'?'card card-buy':s==='high'?'card card-pass':'card';
-  return`<div class="${cls}" style="cursor:pointer;padding:12px 14px" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealType=null;A.modal='logPrice';render()">
+  const ul=priceLabel(item);
+  const sizeTag=item.typicalSize?`<span style="font-size:10px;background:var(--green-light);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">${item.typicalSize}</span>`:'';
+  const bestInfo=best&&best.pkgQty?` · ${best.pkgQty}${best.pkgUnit}`:'';
+  return`<div class="${cls}" style="padding:12px 14px;margin-bottom:8px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-          <button style="background:var(--green);border:none;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;font-size:14px" onclick="event.stopPropagation();A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" title="Edit item">✏️</button>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted)">Buy under $${bp.toFixed(2)}/${item.unit}</div>
-        ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)} at ${best.store}</div>`:''}
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
+        <div style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}${sizeTag}</div>
+        <div style="font-size:11px;color:${item.isEstimated?'var(--text-hint)':'var(--text-muted)'}">${item.isEstimated?'📍 ~$'+bp.toFixed(2)+'/'+ul+' typical':'Buy under $'+bp.toFixed(2)+'/'+ul}</div>
+        ${better?`<div style="font-size:11px;color:var(--green-bright);font-weight:600;margin-top:2px">💡 $${best.price.toFixed(2)}${bestInfo} at ${best.store}</div>`:''}
       </div>
-      <div style="text-align:right;margin-left:12px;flex-shrink:0">
-        ${lp?`<div style="font-size:22px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
-          <div style="font-size:14px;font-weight:700">$${lp.toFixed(2)}</div>`
-        :`<div style="font-size:12px;color:var(--green);font-weight:600">Tap to log</div>`}
+      <div style="display:flex;align-items:center;gap:8px;margin-left:10px;flex-shrink:0">
+        ${lp?`<div style="text-align:center;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">
+          <div style="font-size:22px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
+          <div style="font-size:14px;font-weight:700">$${lp.toFixed(2)}</div>
+        </div>`
+        :`<div style="font-size:12px;color:var(--green);font-weight:600;cursor:pointer" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A._dealMode='plain';A.modal='logPrice';render()">Tap to log</div>`}
+        <button style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px;color:var(--text-hint);line-height:1" onclick="A.selectedItem=A.items.find(i=>i.id==='${item.id}');A.page='detail';render()" title="History & edit">📋</button>
       </div>
     </div>
   </div>`;
@@ -375,22 +526,22 @@ function itemCard(item,store){
 function rDetail(){
   const item=A.selectedItem;if(!item)return'';
   const bp=parseFloat(item.buy_price),logs=(A.logs[item.id]||[]).sort((a,b)=>new Date(b.date)-new Date(a.date)),best=getBest(item.id);
+  const ul=priceLabel(item);
   let h=`<div class="cnt" style="padding-top:16px">
-    <div style="font-size:12px;color:var(--text-muted)">${item.category} · per ${item.unit}</div>
-    <div style="font-size:14px;font-weight:700;color:var(--green);margin:4px 0">Buy under $${bp.toFixed(2)}/${item.unit}</div>
+    <div style="font-size:12px;color:var(--text-muted)">per ${ul}</div>
+    <div style="font-size:14px;font-weight:700;color:var(--green);margin:4px 0">Buy under $${bp.toFixed(2)}/${ul}</div>
     ${best?`<div style="font-size:13px;color:var(--green-bright);font-weight:600">Best: $${best.price.toFixed(2)} at ${best.store} (${fmtD(best.date)})</div>`:''}
     <div style="display:flex;gap:8px;margin:14px 0;flex-wrap:wrap">
       <button class="btn btn-outline btn-sm" onclick="A.modal='editBP';render()">Edit Buy Price</button>
-      <button class="btn btn-outline btn-sm" onclick="A.modal='editName';render()">Edit Name</button>
       <button class="btn btn-sm" style="background:white;color:var(--red);border:1px solid var(--red)" onclick="if(confirm('Delete '+A.selectedItem.name+'?'))deleteItem('${item.id}')">Delete Item</button>
     </div>
     <div class="sec-label">History (${logs.length})</div>`;
   if(!logs.length)h+=`<div class="empty"><div style="font-size:14px">No prices logged yet</div></div>`;
   logs.forEach(l=>{
-    const s=sigSmart(item,l.price);
-    h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    const s=sig(l.price,bp);
+    const ctx=l.pkgQty?` · ${l.pkgQty}${l.pkgUnit}`:'';    h+=`<div style="padding:10px 12px;background:white;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:13px;font-weight:600">${l.store}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${fmtD(l.date)}${l.pkg&&l.pkg>1?' · '+l.pkg+' '+item.unit+'s · $'+(l.total||l.price*l.pkg).toFixed(2)+' total':''}</div></div>
+        <div style="font-size:11px;color:var(--text-muted)">${fmtD(l.date)}${ctx}</div></div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:16px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</span>
         <span style="font-size:15px;font-weight:800">$${l.price.toFixed(2)}</span>
@@ -405,28 +556,46 @@ function rDetail(){
 function rStoresView(){
   let h=`<div class="cnt" style="padding-top:16px">
     <div style="font-size:18px;font-weight:800;margin-bottom:4px">Your Stores</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Compare prices across stores</div>`;
-  if(!A.stores.length)h+=`<div class="empty"><div style="font-size:36px">🏪</div><div style="font-size:14px;font-weight:600;margin-top:8px">No stores yet</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="A.modal='addStore';render()">+ Add Store</button></div></div>`;
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Tap a store to compare prices or start shopping there</div>`;
+  if(!A.stores.length){
+    h+=`<div class="empty"><div style="font-size:36px">🏪</div><div style="font-size:14px;font-weight:600;margin-top:8px">No stores yet</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="A.modal='addStore';render()">+ Add Store</button></div></div>`;
+    h+=`</div>`;return h;
+  }
   h+=`<div style="text-align:right;margin-bottom:12px"><button class="btn btn-outline btn-sm" onclick="A.modal='addStore';render()">+ Add Store</button></div>`;
   A.stores.forEach(store=>{
     const si=[];
     A.items.forEach(item=>{const ls=(A.logs[item.id]||[]).filter(l=>l.store===store);if(ls.length){const sorted=[...ls].sort((a,b)=>new Date(b.date)-new Date(a.date));const best=getBest(item.id);si.push({item,lp:sorted[0].price,date:sorted[0].date,bestP:best?best.price:sorted[0].price,bestS:best?best.store:store});}});
     const exp=A.expandedStore===store;
-    h+=`<div class="card" style="cursor:pointer" onclick="A.expandedStore=A.expandedStore==='${store}'?null:'${store}';render()">
+    h+=`<div class="card" style="cursor:pointer;${exp?'margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0':''}" onclick="A.expandedStore=A.expandedStore==='${esc(store)}'?null:'${esc(store)}';render()">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div><div style="font-size:15px;font-weight:700">🏪 ${store}</div><div style="font-size:11px;color:var(--text-muted)">${si.length} item${si.length!==1?'s':''}</div></div>
         <div style="color:var(--text-muted)">${exp?'▼':'▶'}</div>
       </div>
     </div>`;
-    if(exp){si.sort((a,b)=>a.item.name.localeCompare(b.item.name));si.forEach(x=>{
-      const isBest=x.bestS===store||x.lp<=x.bestP;const sav=(x.lp-x.bestP).toFixed(2);
-      h+=`<div style="padding:10px 16px 10px 28px;background:white;border-bottom:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:13px;font-weight:600">${x.item.name}</div>
-            ${!isBest&&parseFloat(sav)>0.05?`<div style="font-size:11px;color:var(--green-bright);font-weight:600">💡 Save $${sav} at ${x.bestS}</div>`:''}</div>
-          <div style="display:flex;align-items:center;gap:6px"><span>${sigSmart(x.item,x.lp)==='buy'?'🟢':sigSmart(x.item,x.lp)==='high'?'🔴':'🟡'}</span><span style="font-size:14px;font-weight:700">$${x.lp.toFixed(2)}</span></div>
-        </div>
-      </div>`;})}
+    if(exp){
+      h+=`<div class="exp-wrap">`;
+      if(!si.length){
+        h+=`<div class="exp-row" style="color:var(--text-muted);font-size:13px;text-align:center">No prices logged here yet</div>`;
+      }else{
+        si.sort((a,b)=>a.item.name.localeCompare(b.item.name));
+        si.forEach(x=>{
+          const isBest=x.bestS===store||x.lp<=x.bestP;const sav=(x.lp-x.bestP).toFixed(2);
+          h+=`<div class="exp-row">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:13px;font-weight:600">${x.item.name}</div>
+                ${!isBest&&parseFloat(sav)>0.05?`<div style="font-size:11px;color:var(--green-bright);font-weight:600">💡 Save $${sav} at ${x.bestS}</div>`:''}</div>
+              <div style="display:flex;align-items:center;gap:6px"><span>${sig(x.lp,parseFloat(x.item.buy_price))==='buy'?'🟢':sig(x.lp,parseFloat(x.item.buy_price))==='high'?'🔴':'🟡'}</span><span style="font-size:14px;font-weight:700">$${x.lp.toFixed(2)}</span></div>
+            </div>
+          </div>`;
+        });
+      }
+      // actions row
+      h+=`<div class="exp-row" style="display:flex;gap:8px;background:white">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="event.stopPropagation();A.activeStore='${esc(store)}';A.page='shopping';A.search='';render()">Shop here</button>
+        <button class="btn btn-sm" style="background:white;color:var(--red);border:1px solid var(--red)" onclick="event.stopPropagation();if(confirm('Remove '+'${esc(store)}'+'? Your logged prices stay in each item\\'s history.'))deleteStore('${esc(store)}')">Remove</button>
+      </div>`;
+      h+=`</div>`;
+    }
   });
   h+=`</div>`;return h;
 }
@@ -434,135 +603,316 @@ function rStoresView(){
 function rHowToOnboarding(){
   return`<div class="cnt" style="padding-top:24px;padding-bottom:32px">
     <div style="text-align:center;margin-bottom:16px">
-      <div style="width:48px;height:48px;border-radius:50%;background:var(--red);color:white;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">?</div>
       <div style="font-size:20px;font-weight:800;color:var(--green)">How Price Tracker Works</div>
       <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Read this once — it only takes a minute</div>
     </div>
     <div class="help-card">
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
-        <strong>1. Add your stores</strong> — tap the 🛒 Shop tab at the bottom, then tap "Add New Store." Type the store name and you are ready to go.<br><br>
+        <strong>1. Add your stores</strong> — tap the 🛒 Shop tab, then tap "Add New Store."<br><br>
         <strong>2. Pick a store</strong> when you arrive.<br><br>
-        <strong>3. Tap an item</strong> — pick Regular, Marked Down, or BOGO if it applies, then enter the total price on the tag and how many are in the package. The app calculates the price per unit for you. No math needed. For BOGO, "how many" means both items combined.<br><br>
+        <strong>3. Tap an item</strong> — pick Regular, Markdown, 2 for $X, or Buy 1 Get 1 if it applies, then enter the price you see on the shelf. For package items enter the total price. For meat and produce enter the price per pound. The app does the math.<br><br>
         <strong>4. See the light:</strong><br>
-        🟢 <strong>Green</strong> = good deal, stock up<br>
+        🟢 <strong>Green</strong> = great price, stock up<br>
         🟡 <strong>Yellow</strong> = normal price, buy if you need it<br>
         🔴 <strong>Red</strong> = too high, skip if you can<br><br>
-        <strong>5. Compare stores.</strong> The app tells you if another store has a better price.<br><br>
-        <strong>Adding a new item:</strong> Type the name and the app suggests a buy price automatically — no guessing. It matches against common items and adjusts for your state. If it doesn't recognize the item, it gives a reasonable starting estimate instead, clearly marked. You can always type over the suggestion if you know better.<br><br>
-        <strong>New items start cautious:</strong> Until an item has been logged 5 times, it can only ever show green or yellow — never red. The app won't call something overpriced until it actually has enough of your real data to know that for sure.<br><br>
-        <strong>The app learns your prices:</strong> Once an item has 5 or more logged prices, the buy target switches from a generic estimate to the average of what you've actually paid — dropping the highest and lowest log first, so one typo or one splurge purchase can't throw it off.<br><br>
-        <strong>About sale prices:</strong> Log every price, including sales — tag it Marked Down or BOGO so your history stays accurate.<br><br>
-        <strong>About shrinkflation:</strong> The app tracks how many items are in each package. If the count shrinks but the price stays the same, it flags it.<br><br>
-        <strong>Editing, deleting, and your buy price:</strong> Tap the ✏️ pencil next to any item to open its full history. Edit the buy price, rename the item, edit or delete any past entry, or delete the item entirely.
+        <strong>5. Compare stores.</strong> The app shows you if another store has it cheaper.<br><br>
+        <strong>Adding a custom item:</strong> Type the name, pick "By the pound" or "By the package" — that's all. Log the price on the next screen. After 5 real logs the app sets your buy target from your own data automatically.<br><br>
+        <strong>New items start cautious:</strong> No red light until the app has 5 real prices for that item.<br><br>
+        <strong>Editing:</strong> Tap the 📋 icon on any item card to see full history, edit prices, or delete entries.
       </div>
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:16px;padding:14px;font-size:15px" onclick="A.seenHowTo=true;A.page='store_select';save();render()">Got it — Get Started →</button>
+    <button class="btn btn-primary" style="margin-top:16px;padding:14px;font-size:15px" onclick="A.seenHowTo=true;A.page='store_select';save();render()">Got it — Get Started →</button>
   </div>`;
 }
+
 function rMore(){
   return`<div class="cnt" style="padding-top:16px">
-    <div style="font-size:18px;font-weight:800;margin-bottom:16px">How To Use</div>
-    <div class="help-card">
-      <div style="font-size:15px;font-weight:800;margin-bottom:10px">How It Works</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
-        <strong>1. Add your stores</strong> — tap the 🛒 Shop tab at the bottom, then tap "Add New Store." Type the store name and you are ready to go.<br><br>
-        <strong>2. Pick a store</strong> when you arrive.<br><br>
-        <strong>3. Tap an item</strong> — pick Regular, Marked Down, or BOGO if it applies, then enter the total price on the tag and how many are in the package. The app calculates the price per unit for you. No math needed. For BOGO, "how many" means both items combined.<br><br>
-        <strong>4. See the light:</strong><br>
-        🟢 <strong>Green</strong> = good deal, stock up<br>
-        🟡 <strong>Yellow</strong> = normal price, buy if you need it<br>
-        🔴 <strong>Red</strong> = too high, skip if you can<br><br>
-        <strong>5. Compare stores.</strong> The app tells you if another store has a better price.<br><br>
-        <strong>Adding a new item:</strong> Type the name and the app suggests a buy price automatically — no guessing. It matches against common items and adjusts for your state. If it doesn't recognize the item, it gives a reasonable starting estimate instead, clearly marked. You can always type over the suggestion if you know better.<br><br>
-        <strong>New items start cautious:</strong> Until an item has been logged 5 times, it can only ever show green or yellow — never red. The app won't call something overpriced until it actually has enough of your real data to know that for sure.<br><br>
-        <strong>The app learns your prices:</strong> Once an item has 5 or more logged prices, the buy target switches from a generic estimate to the average of what you've actually paid — dropping the highest and lowest log first, so one typo or one splurge purchase can't throw it off. From then on it keeps adjusting as you log more.<br><br>
-        <strong>About sale prices:</strong> Log every price, including sales — tag it Marked Down or BOGO so your history stays accurate.<br><br>
-        <strong>About shrinkflation:</strong> The app tracks how many items are in each package. If the count shrinks but the price stays the same, it flags it — you are paying more per unit even though the price tag looks the same.<br><br>
-        <strong>Editing, deleting, and your buy price:</strong> Tap the ✏️ pencil next to any item to open its full history. From there you can edit the buy price, rename the item, edit or delete any past entry, or delete the item entirely.
+    <div style="font-size:18px;font-weight:800;margin-bottom:16px">How It Works</div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 1 — Add your stores</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap the 🛒 Shop tab, then tap <strong>Add New Store</strong>. Type the name — Food Lion, Aldi, Costco, whatever you shop at. Add as many as you want.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 2 — Pick your store when you arrive</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">The app tracks which store each price came from so it can compare them for you later.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 3 — Tap an item and log the price</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        Two types of items, two simple flows:<br><br>
+        <strong>Meat, produce, eggs, milk</strong> — type the price per pound (or per dozen, per gallon) straight off the shelf sign. If your item has a sticker with a total price and weight, scroll down and enter both — the app does the math.<br><br>
+        <strong>Paper goods, canned goods, packaged items</strong> — type the total price on the tag. That's it. The count field is optional and only used to catch shrinkflation.
       </div>
     </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 4 — Use the deal buttons when there's a sale</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        When you tap an item to log a price, four buttons appear at the top:<br><br>
+        <strong>Regular</strong> — standard shelf price, no deal<br>
+        <strong>Markdown</strong> — red sticker, clearance, or manager's special. Just type what the tag says.<br>
+        <strong>2 for $X</strong> — type the total deal price and how many are in it. App splits it out.<br>
+        <strong>Buy 1 Get 1</strong> — type the price of one item. App cuts it in half since you're getting two.
+      </div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 5 — Read the light</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+        🟢 <strong>Green — Buy it.</strong> At or below your target. Stock up if you can.<br><br>
+        🟡 <strong>Yellow — OK price.</strong> Normal range. Buy what you need.<br><br>
+        🔴 <strong>Red — Too high.</strong> Skip it and wait for it to come back down.
+      </div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Step 6 — Compare stores</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap the 🏪 Stores tab to see everything you have logged and find out which store has the best price on each item. The app will flag it right on the shopping screen too.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Your buy price</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">This is the target — the price where you say yes without thinking about it. Green means at or below it. The app sets a starting target based on your state's average prices. Change it anytime: tap the item, tap <strong>Edit Buy Price</strong>.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Tip: name items the way you buy them</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">If you always buy the same size or brand, put it in the name — "Graza Olive Oil," "8oz Cream Cheese," "32oz Greek Yogurt." The more specific the name, the more useful the tracking.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Tip: always check the buy target when adding a custom item</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">When you add a custom item, the app guesses a starting buy target based on your state's average prices for that type of item. That guess is a starting point — not gospel. A generic cooking oil target is not the same as a premium olive oil target.<br><br>Always look at the buy target before tapping Add Item. If it looks too low or too high for what you actually buy, change it right there. You can also update it anytime — tap the item in your list, then tap <strong>Edit Buy Price</strong>.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">Fixing a mistake</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7">Tap any item to see its full price history. Tap ✏️ to edit an entry or 🗑️ to delete it. On the result screen after logging, there is also a "Wrong price? Tap to delete" button right there.</div>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">🔖 Bookmark This App</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.6">Bookmark this page in your browser for quick access. You will always get the latest version automatically — no updates to install, no app store needed.<br><br><strong>iPhone Safari:</strong> Tap the share icon → Add Bookmark<br><strong>Android Chrome:</strong> Tap the three-dot menu → Bookmarks → Add Bookmark</div>
+    </div>
+
+    <div style="text-align:center;padding:20px 0 8px">
+      <button onclick="A.page='settings';render()" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:8px 16px">⚙️ Settings &amp; Data</button>
+    </div>
+    <div style="text-align:center;padding-bottom:24px;font-size:11px;color:var(--text-hint)">Steward what you have. Serve where you are.</div>
+  </div>`;
+}
+
+function rSettings(){
+  return`<div class="cnt" style="padding-top:16px">
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">Settings &amp; Data</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">App data and preferences</div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px">Your state</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Currently set to <strong>${A.userState||'not set'}</strong>. This adjusts starting buy price targets to your area.</div>
+      <select class="inp" id="st-state" onchange="A.userState=this.value;save();render();toast('State updated')">
+        ${STATE_LIST.map(s=>`<option value="${s}" ${A.userState===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="help-card" style="margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px">Back up your data</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:6px">Your prices live on this device only. They can be wiped if you clear your browser history or switch to a new phone.</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:12px">Back up regularly and save the text somewhere safe — Notes, email, or iCloud.</div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="exportData()">Back Up My Data</button>
+      <button class="btn btn-outline" onclick="A.modal='importData';render()">Restore From Backup</button>
+    </div>
+
     <div style="text-align:center;padding:24px 0;font-size:11px;color:var(--text-hint)">Steward what you have. Serve where you are.</div>
   </div>`;
 }
 
 function rNav(){
   return`<div class="nav">
-    <button class="nav-btn ${A.page==='more'?'active':''}" onclick="A.page='more';render()">
-      <span style="width:20px;height:20px;border-radius:50%;background:var(--red);color:white;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">?</span>How To
-    </button>
     <button class="nav-btn ${A.page==='store_select'||A.page==='shopping'?'active':''}" onclick="A.page=A.activeStore?'shopping':'store_select';A.search='';render()"><span class="nav-i">🛒</span>Shop</button>
     <button class="nav-btn ${A.page==='stores'?'active':''}" onclick="A.page='stores';render()"><span class="nav-i">🏪</span>Stores</button>
+    <button class="nav-btn ${A.page==='more'||A.page==='settings'?'active':''}" onclick="A.page='more';render()"><span class="nav-i">ℹ️</span>How To</button>
   </div>`;
 }
 
+function setDeal(mode){A._dealMode=mode;const item=A.selectedItem;if(item){renderLogBody(item);}}
+
+// What to call the price unit in labels
+function priceLabel(item){
+  if(item.mode==='package')return'package';
+  if(item.unit==='lb')return'lb';
+  return'package'; // anything else (old oz, gallon, dozen) is effectively a package price
+}
+
+function priceLblFor(item,dm){
+  const isPerLb=item.mode==='unit'&&item.unit==='lb';
+  if(dm==='twofor')return isPerLb?'Total deal price (e.g. 2 for $6)':'Total deal price (e.g. 2 for $10)';
+  if(dm==='bogo')return isPerLb?'Price per lb of ONE item':'Price of ONE package';
+  if(dm==='markdown')return isPerLb?'Marked-down price per lb':'Marked-down package price';
+  return isPerLb?'Price per lb on the tag':'Total price on the tag';
+}
+
+function logBody(item){
+  const best=getBest(item.id);
+  const dm=A._dealMode||'plain';
+  const ul=priceLabel(item);
+  const isPkg=item.mode==='package';
+
+  let body=`<div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
+    ${item.isEstimated
+      ?`<div style="font-size:12px;color:var(--text-hint);margin-bottom:14px">📍 Typical price in your area: around $${parseFloat(item.buy_price).toFixed(2)} per ${ul} — just a rough starting point. Log what you actually see below.</div>`
+      :`<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${ul}</div>`}
+    ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best seen:</strong> $${best.price.toFixed(2)}/${ul} at ${best.store}</div>`:''}
+    <div class="deal-tabs" style="font-size:11px">
+      <div class="deal-tab ${dm==='plain'?'active':''}" onclick="setDeal('plain')">Regular</div>
+      <div class="deal-tab ${dm==='markdown'?'active':''}" onclick="setDeal('markdown')">Markdown</div>
+      <div class="deal-tab ${dm==='twofor'?'active':''}" onclick="setDeal('twofor')">2 for $X</div>
+      <div class="deal-tab ${dm==='bogo'?'active':''}" onclick="setDeal('bogo')">Buy 1 Get 1</div>
+    </div>
+    <div class="lbl">${priceLblFor(item,dm)}</div>
+    <input class="inp" style="font-size:28px;font-weight:800;text-align:center;padding:18px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU()">`;
+
+  if(dm==='twofor'){
+    body+=`<div class="lbl" style="margin-top:12px">How many in the deal?</div>
+      <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-dealn" type="number" step="1" value="2" inputmode="numeric" oninput="calcU()">`;
+  }
+
+  body+=`<div id="uc" style="text-align:center;font-size:20px;font-weight:800;color:var(--green);margin:14px 0;min-height:32px"></div>
+    <button class="btn btn-primary" onclick="submitLog('${item.id}')">Log Price</button>
+    <div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <button onclick="if(confirm('Remove ${esc(item.name)} from your list?')){deleteItem('${item.id}');A.modal=null;}" style="background:none;border:none;font-size:12px;color:var(--text-hint);cursor:pointer;padding:4px 0;text-decoration:underline">Remove from list</button>
+    </div>`;
+  return body;
+}
+
+function renderLogBody(item){
+  const c=document.getElementById('logbody');
+  if(c){c.innerHTML=logBody(item);setTimeout(()=>{const p=document.getElementById('m-p');if(p)p.focus();},0);}
+}
+
+function computePrice(){
+  const item=A.selectedItem;if(!item)return{price:0};
+  const dm=A._dealMode||'plain';
+  const raw=parseFloat(document.getElementById('m-p')?.value)||0;
+  if(dm==='twofor'){
+    const dn=Math.max(2,parseFloat(document.getElementById('m-dealn')?.value)||2);
+    return{price:+(raw/dn).toFixed(2)};
+  }
+  if(dm==='bogo')return{price:+(raw/2).toFixed(2)};
+  return{price:+raw.toFixed(2)};
+}
+
+function calcU(){
+  const item=A.selectedItem;if(!item)return;
+  const u=document.getElementById('uc');if(!u)return;
+  const {price}=computePrice();
+  const ul=priceLabel(item);
+  if(price>0){
+    const bp=parseFloat(item.buy_price),s=sig(price,bp);
+    const light=s==='buy'?'🟢':s==='high'?'🔴':'🟡';
+    u.innerHTML=light+' $'+price.toFixed(2)+' per '+ul;
+  }else u.textContent='';
+}
+
+function submitLog(itemId){
+  const {price}=computePrice();
+  if(!price||price<=0)return toast('Enter the price');
+  addLog(itemId,price);
+  A.modal=null;
+}
+
 function rModal(){
+  if(A.modal==='sizeSelect'&&A._pendingStarter){
+    const ps=A._pendingStarter;
+    const sizes=getSizes(ps.starterName)||{};
+    const sizeKeys=Object.keys(sizes);
+    return`<div class="modal-overlay" onclick="A.modal=null;A._pendingStarter=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">${ps.name}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">What size do you usually buy? The app sets your buy target based on the size.</div>
+      ${sizeKeys.map(sz=>{
+        const bp=adjustedBP(sizes[sz]);
+        return`<button class="store-btn" onclick="const it=addItem('${esc(ps.name)}','${ps.unit}',${bp},'${ps.mode}','${esc(sz)}');A.selectedItem=it;A._dealMode='plain';A._pendingStarter=null;A.modal='logPrice';render()">
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700">${sz}</div>
+            <div style="font-size:12px;color:var(--text-muted)">Buy target: $${bp.toFixed(2)}</div>
+          </div>
+          <div style="font-size:12px;color:var(--green);font-weight:700">→</div>
+        </button>`;
+      }).join('')}
+      <button style="width:100%;padding:12px;background:none;border:1px dashed var(--border);border-radius:10px;font-size:13px;color:var(--text-muted);cursor:pointer;margin-top:4px" onclick="const it=addItem('${esc(ps.name)}','${ps.unit}',${ps.bp},'${ps.mode}',null);A.selectedItem=it;A._dealMode='plain';A._pendingStarter=null;A.modal='logPrice';render()">Skip — use the default target ($${ps.bp.toFixed(2)})</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='learnUpdate'&&A._learnSuggest){
+    const ls=A._learnSuggest;
+    const item=A.items.find(i=>i.id===ls.itemId);
+    if(!item){A.modal=null;return'';}
+    const wasEstimated=item.isEstimated;
+    return`<div class="modal-overlay" onclick="A.modal=null;A._learnSuggest=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div style="font-size:36px;text-align:center;margin-bottom:8px">📊</div>
+      <div class="modal-title" style="text-align:center">Your prices are talking</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">${wasEstimated
+        ?`Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your real average is <strong>$${ls.avg.toFixed(2)}</strong>. This is from your own shopping — much better than the rough estimate we started with. Want to set this as your buy target?`
+        :`Based on ${(A.logs[ls.itemId]||[]).length} prices you've logged for <strong>${item.name}</strong>, your average price has been <strong>$${ls.avg.toFixed(2)}</strong>. Your current buy target is $${ls.current.toFixed(2)}.<br><br>${ls.avg<ls.current?'Your real prices are consistently lower than your target. Lowering it means you\'ll get green lights that actually reflect a good deal for you.':'Your real prices are running higher than your target. Raising it gives you a more accurate signal for your market.'}`}</div>
+      <button class="btn btn-primary" style="margin-bottom:8px" onclick="updateBP('${ls.itemId}',${ls.avg});A.modal=null;A._learnSuggest=null;render();toast('Buy target updated to $'+${ls.avg}.toFixed(2))">Set target to $${ls.avg.toFixed(2)}</button>
+      <button class="btn btn-outline" onclick="A.modal=null;A._learnSuggest=null;render()">${wasEstimated?'Not yet':'Keep my current target ($'+ls.current.toFixed(2)+')'}</button>
+    </div></div>`;
+  }
+
   if(A.modal==='addStore')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Store</div>
     <input class="inp" id="m-sn" placeholder="e.g. Food Lion, Aldi, Costco" autofocus>
     <button class="btn btn-primary" style="margin-top:14px" onclick="addStore(document.getElementById('m-sn').value)">Add & Start Shopping</button>
   </div></div>`;
 
-  if(A.modal==='addItem')return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+  if(A.modal==='addItem'){
+    _customMode='unit'; // always reset when modal opens
+    return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-title">Add Custom Item</div>
-    <input class="inp" id="m-n" placeholder="Item name" style="margin-bottom:10px" oninput="updateSuggestedPrice()">
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div class="lbl">Price per ___?</div><select class="inp" id="m-u" onchange="updateSuggestedPrice()">${UNITS.map(u=>'<option>'+u+'</option>').join('')}</select>
+    <div class="lbl">Item name</div>
+    <input class="inp" id="m-n" placeholder='e.g. "Graza Olive Oil" or "Ground Pork"' style="margin-bottom:14px" oninput="guessCustomMode()" autofocus>
+    <div class="lbl">How is it priced at the store?</div>
+    <div class="deal-tabs" style="margin-bottom:8px">
+      <div class="deal-tab" id="cm-unit" onclick="setCustomMode('unit')">By the pound</div>
+      <div class="deal-tab" id="cm-pkg" onclick="setCustomMode('package')">By the package</div>
     </div>
-    <div class="lbl">Buy price — stock up below this</div>
-    <div id="m-bp-suggest" style="font-size:12px;color:var(--green);margin-bottom:6px;min-height:16px;font-weight:600"></div>
-    <input class="inp" id="m-bp" type="number" step="0.01" placeholder="Type an item name above to get a suggestion" inputmode="decimal" style="margin-bottom:14px" oninput="this.dataset.touched='1'">
-    <button class="btn btn-primary" onclick="const sug=suggestBuyPrice(document.getElementById('m-n').value,document.getElementById('m-u').value);const bpEl=document.getElementById('m-bp');const confident=sug.matched||bpEl.dataset.touched==='1';const it=addItem(document.getElementById('m-n').value,'Other',document.getElementById('m-u').value,bpEl.value,confident);A.selectedItem=it;A._dealType=null;A.modal='logPrice';render()">Add & Log Price</button>
+    <div style="font-size:12px;color:var(--text-hint);margin-bottom:16px;line-height:1.5">Pick whichever matches the shelf tag. You'll log the exact price you see on the next screen — no guessing.</div>
+    <button class="btn btn-primary" onclick="submitCustom()">Next — Log the Price</button>
   </div></div>`;
+  }
 
   if(A.modal==='logPrice'&&A.selectedItem){
-    const item=A.selectedItem,best=getBest(item.id);
-    const deal=A._dealType||'regular';
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
-      <div style="font-size:18px;font-weight:800;margin-bottom:4px">${item.name}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Buy under $${parseFloat(item.buy_price).toFixed(2)} per ${item.unit}</div>
-      ${best?`<div style="background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px"><strong>Best:</strong> $${best.price.toFixed(2)}/${item.unit} at ${best.store}</div>`:''}
-      <div style="display:flex;gap:6px;margin-bottom:14px">
-        <button class="btn ${deal==='regular'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='regular';render()">Regular</button>
-        <button class="btn ${deal==='markdown'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='markdown';render()">Marked Down</button>
-        <button class="btn ${deal==='bogo'?'btn-primary':'btn-outline'} btn-sm" style="flex:1;font-size:11px" onclick="A._dealType='bogo';render()">BOGO</button>
-      </div>
-      ${deal==='bogo'?`<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.4">Enter the total you paid and how many you walked out with — both items combined.</div>`:''}
-      <div class="lbl">What is the total price on the tag?</div>
-      <input class="inp" style="font-size:24px;font-weight:800;text-align:center;padding:16px" id="m-p" type="number" step="0.01" placeholder="$0.00" inputmode="decimal" autofocus oninput="calcU('${item.unit}')">
-      <div class="lbl" style="margin-top:12px">${
-  item.unit==='lb'||item.unit==='oz'?`How many ${item.unit}s${deal==='bogo'?' total':''}?`:
-  item.unit==='gallon'?'How many gallons?':
-  item.unit==='dozen'?'How many dozen?':
-  item.unit==='loaf'?'How many loaves?':
-  'How many are in this package'+(deal==='bogo'?', total':'')+'?'
-}</div>
-      <input class="inp" style="font-size:20px;font-weight:700;text-align:center;padding:12px" id="m-pk" type="number" step="0.01" value="1" inputmode="decimal" oninput="calcU('${item.unit}')">
-      <div id="uc" style="text-align:center;font-size:18px;font-weight:800;color:var(--green);margin:12px 0;min-height:28px"></div>
-      <button class="btn btn-primary" onclick="addLog('${item.id}',document.getElementById('m-p').value,document.getElementById('m-pk').value);A.modal=null;">Log Price</button>
+      <div id="logbody">${logBody(A.selectedItem)}</div>
     </div></div>`;
   }
 
   if(A.modal==='result'&&A._logResult){
     const r=A._logResult,item=A.items.find(i=>i.id===r.itemId);
     if(!item){A.modal=null;return'';}
-    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sigSmart(item,pu),total=r.log.total||pu,pkg=r.log.pkg||1;
+    const bp=parseFloat(item.buy_price),pu=r.log.price,s=sig(pu,bp);
     const best=getBest(item.id),better=best&&best.store!==r.log.store&&best.price<pu;
-    // Shrinkflation check
+    const ul=priceLabel(item);
     const prev=getPrevAt(item.id,r.log.store,r.log.id);
-    const shrunk=prev&&prev.pkg&&pkg&&prev.pkg>pkg&&prev.total&&total>=prev.total*0.95;
+    // shrinkflation: only flag if both logs have pkgQty with the same unit and current is smaller
+    const shrunk=prev&&prev.pkgQty&&r.log.pkgQty&&prev.pkgUnit===r.log.pkgUnit&&r.log.pkgQty<prev.pkgQty;
     return`<div class="modal-overlay" onclick="A.modal=null;A._logResult=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="result-card ${s==='buy'?'result-buy':s==='high'?'result-pass':'result-ok'}">
         <div style="font-size:48px;margin-bottom:8px">${s==='buy'?'🟢':s==='high'?'🔴':'🟡'}</div>
         <div style="font-size:24px;font-weight:800">${s==='buy'?'BUY IT':s==='high'?'TOO HIGH':'OK PRICE'}</div>
-        ${pkg>1?`<div style="font-size:16px;color:var(--text-muted);margin-top:8px">$${total.toFixed(2)} for ${pkg} ${item.unit}s</div>`:''}
-        <div style="font-size:32px;font-weight:800;margin:8px 0">$${pu.toFixed(2)}<span style="font-size:14px;font-weight:500;color:var(--text-muted)"> per ${item.unit}</span></div>
+        <div style="font-size:32px;font-weight:800;margin:8px 0">$${pu.toFixed(2)}<span style="font-size:14px;font-weight:500;color:var(--text-muted)"> per ${ul}</span></div>
         <div style="font-size:12px;color:var(--text-muted)">${item.name} at ${r.log.store}</div>
       </div>
       ${s==='buy'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--green-bright);margin-bottom:12px">At or below your $${bp.toFixed(2)} target — grab extra!</div>`:''}
       ${s==='high'?`<div style="font-size:14px;font-weight:600;text-align:center;color:var(--red);margin-bottom:12px">Above your $${bp.toFixed(2)} target — skip if you can.</div>`:''}
-      ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${item.unit}</div>`:''}
-      ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> Last time this was ${prev.pkg} ${item.unit}s for $${prev.total.toFixed(2)}. Now it is ${pkg} for $${total.toFixed(2)}. You are paying more per ${item.unit}.</div>`:''}
+      ${better?`<div style="background:var(--green-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>💡 $${best.price.toFixed(2)} at ${best.store}</strong> — $${(pu-best.price).toFixed(2)} cheaper per ${ul}</div>`:''}
+      ${shrunk?`<div style="background:var(--yellow-light);border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px">⚠️ <strong>Shrinkflation alert:</strong> This used to be ${prev.pkgQty}${prev.pkgUnit}. Now it is ${r.log.pkgQty}${r.log.pkgUnit}. Same price, less product.</div>`:''}
+      ${A._learnSuggest&&A._learnSuggest.itemId===r.itemId?`<div style="background:#f0f4ff;border:1px solid #b0bef8;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px;font-size:13px"><strong>📊 Your prices are talking</strong><br>${A.items.find(i=>i.id===r.itemId)?.isEstimated?`After ${(A.logs[r.itemId]||[]).length} logs, your real average is $${A._learnSuggest.avg.toFixed(2)}.`:`After ${(A.logs[r.itemId]||[]).length} logs, your average is $${A._learnSuggest.avg.toFixed(2)}. Your target is $${A._learnSuggest.current.toFixed(2)}.`} <button onclick="A.modal='learnUpdate';render()" style="background:none;border:none;color:#4455cc;font-size:13px;font-weight:700;cursor:pointer;text-decoration:underline">Set my target →</button></div>`:''}
       <button class="btn btn-primary" onclick="A.modal=null;A._logResult=null;render()">Done</button>
+      <button onclick="A._shrinkItem='${r.itemId}';A.modal='trackShrink';render()" style="display:block;width:100%;margin-top:10px;background:#eef5fb;border:2px solid #4a90c4;border-radius:10px;color:#2c6694;font-size:14px;font-weight:800;cursor:pointer;padding:12px;text-align:center">📦 Track Package Size — Catch Shrinkflation</button>
       <button style="display:block;width:100%;margin-top:8px;background:var(--red-light);border:1px solid rgba(204,68,68,.2);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${r.itemId}','${r.log.id}');A.modal=null;A._logResult=null;render()">Wrong price? Tap to delete</button>
     </div></div>`;
   }
@@ -572,47 +922,117 @@ function rModal(){
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">Edit Buy Price</div>
       <div style="font-size:14px;margin-bottom:12px">${item.name}</div>
-      <div class="lbl">Buy price — stock up below this</div>
+      <div class="lbl">Buy price — stock up at or below this (per ${priceLabel(item)})</div>
       <input class="inp" id="m-eb" type="number" step="0.01" value="${parseFloat(item.buy_price).toFixed(2)}" inputmode="decimal" style="margin-bottom:14px">
       <button class="btn btn-primary" onclick="updateBP('${item.id}',document.getElementById('m-eb').value);A.modal=null;A.selectedItem=A.items.find(i=>i.id==='${item.id}');">Update</button>
     </div></div>`;
   }
 
-  if(A.modal==='editName'&&A.selectedItem){
-    const item=A.selectedItem;
-    return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
-      <div class="modal-title">Edit Name</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Add a brand or rename</div>
-      <input class="inp" id="m-en" value="${item.name}" style="margin-bottom:14px">
-      <button class="btn btn-primary" onclick="renameItem('${item.id}',document.getElementById('m-en').value);A.modal=null;A.selectedItem=A.items.find(i=>i.id==='${item.id}');">Save</button>
-    </div></div>`;
-  }
-
   if(A.modal==='editLog'&&A._editLog){
     const e=A._editLog,item=A.items.find(i=>i.id===e.itemId),l=(A.logs[e.itemId]||[]).find(x=>x.id===e.logId);
-    if(!item){A.modal=null;return'';}
+    if(!item||!l){A.modal=null;return'';}
+    const ul=priceLabel(item);
     return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
       <div class="modal-title">Edit Price</div>
       <div style="font-size:14px;font-weight:600;margin-bottom:4px">${item.name} at ${l.store}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${fmtD(l.date)}</div>
-      <div class="lbl">Total price</div>
-      <input class="inp" id="m-et" type="number" step="0.01" value="${(l.total||l.price).toFixed(2)}" inputmode="decimal" style="margin-bottom:10px">
-      <div class="lbl">${
-  item.unit==='lb'||item.unit==='oz'?`How many ${item.unit}s?`:
-  item.unit==='gallon'?'How many gallons?':
-  item.unit==='dozen'?'How many dozen?':
-  item.unit==='loaf'?'How many loaves?':
-  'How many are in this package?'
-}</div>
-      <input class="inp" id="m-ek" type="number" step="0.01" value="${l.pkg||1}" inputmode="decimal" style="margin-bottom:14px">
-      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek').value);A.modal=null;A._editLog=null;">Save Changes</button>
+      <div class="lbl">${item.mode==='package'?'Total package price':'Price per lb'}</div>
+      <input class="inp" id="m-et" type="number" step="0.01" value="${l.price.toFixed(2)}" inputmode="decimal" style="margin-bottom:14px">
+      ${l.pkgQty?`<div class="lbl">Package size (${l.pkgUnit})</div><input class="inp" id="m-ek" type="number" step="0.1" value="${l.pkgQty}" inputmode="decimal" style="margin-bottom:14px"><input type="hidden" id="m-eu" value="${l.pkgUnit}">`:'' }
+      <button class="btn btn-primary" onclick="editLog('${e.itemId}','${l.id}',document.getElementById('m-et').value,document.getElementById('m-ek')?.value,document.getElementById('m-eu')?.value);A.modal=null;A._editLog=null;">Save Changes</button>
       <button style="display:block;width:100%;margin-top:8px;background:none;border:1px solid var(--red);border-radius:8px;color:var(--red);font-size:13px;font-weight:600;cursor:pointer;padding:10px" onclick="deleteLog('${e.itemId}','${l.id}');A.modal=null;A._editLog=null;">Delete This Entry</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='trackShrink'&&A._shrinkItem){
+    const item=A.items.find(i=>i.id===A._shrinkItem);
+    if(!item){A.modal=null;return'';}
+    const lastLog=(A.logs[item.id]||[])[0];
+    const prev=lastLog&&lastLog.pkgQty?`Last recorded: ${lastLog.pkgQty} ${lastLog.pkgUnit}`:'';
+    return`<div class="modal-overlay" onclick="A.modal=A._logResult?'result':'logPrice';render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">📦 Track Package Size</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Record what is in this package so the app can catch shrinkflation — when the package gets smaller but the price stays the same.</div>
+      ${prev?`<div style="font-size:12px;font-weight:700;color:var(--green-mid);margin-bottom:14px">${prev}</div>`:'<div style="margin-bottom:14px"></div>'}
+      <div class="lbl">How much is in the package?</div>
+      <input class="inp" id="sk-qty" type="number" step="0.1" placeholder="e.g. 32" inputmode="decimal" style="font-size:24px;font-weight:800;text-align:center;padding:16px;margin-bottom:12px">
+      <div class="lbl">Unit</div>
+      <div class="deal-tabs" style="margin-bottom:16px">
+        <div class="deal-tab active" id="sk-oz" onclick="setShrinkUnit('oz')">oz</div>
+        <div class="deal-tab" id="sk-lb" onclick="setShrinkUnit('lb')">lbs</div>
+        <div class="deal-tab" id="sk-ct" onclick="setShrinkUnit('ct')">count</div>
+      </div>
+      <button class="btn btn-primary" onclick="saveShrink('${item.id}')">Save Package Size</button>
+      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal=A._logResult?'result':'logPrice';render()">← Back</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='exportData'){
+    const txt=A._exportText||'';
+    return`<div class="modal-overlay" onclick="A.modal=null;A._exportText=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Back Up Your Data</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Press and hold in the box below, tap <strong>Select All</strong>, then tap <strong>Copy</strong>. Paste it into Notes, iCloud, email — anywhere you want to keep it safe.</div>
+      <textarea class="inp" readonly rows="6" onclick="this.select()" style="resize:none;font-family:monospace;font-size:10px;margin-bottom:14px;color:var(--text-muted)">${txt}</textarea>
+      <button class="btn btn-primary" onclick="if(navigator.clipboard){navigator.clipboard.writeText(A._exportText||'').then(()=>toast('Copied to clipboard')).catch(()=>toast('Press and hold the box to copy manually'))}else{toast('Press and hold the box to copy manually')}">Copy to Clipboard</button>
+      <button style="display:block;width:100%;margin-top:8px;background:none;border:none;font-size:13px;color:var(--text-hint);cursor:pointer;padding:8px" onclick="A.modal=null;A._exportText=null;render()">Done</button>
+    </div></div>`;
+  }
+
+  if(A.modal==='importData'){
+    return`<div class="modal-overlay" onclick="A.modal=null;render()"><div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-title">Restore From Backup</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Paste the contents of a backup file below. This replaces everything currently in the app.</div>
+      <textarea class="inp" id="m-imp" rows="6" placeholder='{"v":2,...}' style="resize:vertical;font-family:monospace;font-size:11px;margin-bottom:14px"></textarea>
+      <button class="btn btn-primary" onclick="importData(document.getElementById('m-imp').value)">Restore</button>
     </div></div>`;
   }
   return'';
 }
 
-function calcU(unit){const p=parseFloat(document.getElementById('m-p')?.value)||0,k=parseFloat(document.getElementById('m-pk')?.value)||1,u=document.getElementById('uc');if(!u)return;if(p>0&&k>0)u.textContent='= $'+(p/k).toFixed(2)+' per '+unit;else u.textContent='';}
+// ---- Shrinkflation modal helpers ----
+let _shrinkUnit='oz';
+function setShrinkUnit(u){
+  _shrinkUnit=u;
+  ['oz','lb','ct'].forEach(x=>{const el=document.getElementById('sk-'+x);if(el)el.classList.toggle('active',x===u);});
+}
+function saveShrink(itemId){
+  const qty=document.getElementById('sk-qty')?.value;
+  if(!qty||parseFloat(qty)<=0)return toast('Enter the package size');
+  // only attach to the log that was just created — never to an old one
+  if(!A._logResult||A._logResult.itemId!==itemId)return toast('Log a price first, then track the size');
+  const logs=A.logs[itemId]||[];
+  const target=logs.find(l=>l.id===A._logResult.log.id);
+  if(!target)return toast('Log a price first, then track the size');
+  target.pkgQty=+parseFloat(qty).toFixed(2);
+  target.pkgUnit=_shrinkUnit;
+  // update the in-memory _logResult so the result screen reflects the new size
+  A._logResult.log.pkgQty=target.pkgQty;
+  A._logResult.log.pkgUnit=target.pkgUnit;
+  save();A.modal='result';render();toast('Package size saved');
+}
+let _customMode='unit';
+function setCustomMode(m){
+  _customMode=m;
+  const u=document.getElementById('cm-unit'),p=document.getElementById('cm-pkg');
+  if(u&&p){u.classList.toggle('active',m==='unit');p.classList.toggle('active',m==='package');}
+}
+function guessCustomMode(){
+  const name=document.getElementById('m-n')?.value||'';
+  if(!name.trim())return;
+  const g=guessItem(name);
+  setCustomMode(g.mode);
+}
+function submitCustom(){
+  const name=document.getElementById('m-n')?.value||'';
+  if(!name.trim())return toast('Enter an item name');
+  const mode=_customMode;
+  const unit=mode==='package'?'package':'lb';
+  const g=guessItem(name);
+  // buy_price starts as a rough background estimate — flagged isEstimated so the log
+  // screen shows it as "typical price in your area" rather than a confirmed target.
+  // The learning system (5+ real logs) will replace it with her actual average.
+  const it=addItem(name,unit,g.bp,mode,null,true);
+  A.selectedItem=it;A._dealMode='plain';A.modal='logPrice';render();
+}
 
 load();render();
 
